@@ -53,8 +53,7 @@ impl MovementBackend for Fly {
         if input_state.up.is_pressed {
             body.velocity.y = DEFAULT_PLAYER_SPEED;
         }
-
-        body.position += body.velocity * dt;
+        body.step(dt);
     }
 }
 
@@ -85,8 +84,7 @@ impl MovementBackend for Walk {
             body.velocity.y = get_initial_jump_vel(DEFAULT_PLAYER_JUMP_HEIGHT);
         }
 
-        body.position += body.velocity * dt;
-        body.accumulator -= dt;
+        body.step(dt);
     }
 }
 

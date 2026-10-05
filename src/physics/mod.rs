@@ -27,6 +27,11 @@ impl PhysicsBody {
             accumulator: 0.,
         }
     }
+
+    /// Steps the body based on its currently set velocity and the given `dt`
+    pub fn step(&mut self, dt: f32) {
+        self.position += self.velocity * dt;
+    }
 }
 
 pub fn colliding_with_voxel_from_pos(p: &PhysicsBody, vox: Vec3) -> bool {
