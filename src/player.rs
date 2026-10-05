@@ -3,7 +3,10 @@ use glam::Vec3;
 use crate::{
     engine::world::World,
     input::InputState,
-    physics::{GRAVITY, PHYSICS_DT, PhysicsBody},
+    physics::{
+        PHYSICS_DT, PhysicsBody,
+        movement::{Movement, MovementBackend},
+    },
     render::camera::Camera,
 };
 
@@ -17,21 +20,22 @@ pub struct PlayerState {
     body: PhysicsBody,
 }
 
+impl PlayerState {
+    /// Creates a new player state snapshot from a physics body.
+    pub fn new(body: PhysicsBody) -> Self {
+        Self { body }
+    }
+}
+
 pub struct Player {
     pub body: PhysicsBody,
+    movement: Movement,
 
     mouse_sensitivity: f32,
     /// multiplier for a normalized velocity vector, player speed
     move_speed: f32,
 
     pub camera: Camera,
-}
-
-impl PlayerState {
-    /// Creates a new player state snapshot from a physics body.
-    pub fn new(body: PhysicsBody) -> Self {
-        Self { body }
-    }
 }
 
 impl Player {
@@ -42,6 +46,7 @@ impl Player {
             camera: Camera::looking_at(position, Vec3::ZERO),
             mouse_sensitivity: DEFAULT_MOUSE_SENS,
             move_speed: DEFAULT_PLAYER_SPEED,
+            movement: Movement::fly(),
         }
     }
 
@@ -53,26 +58,20 @@ impl Player {
         input_state: &mut InputState,
         last_player_state: Option<&PlayerState>,
     ) -> PhysicsBody {
-        // TODO: probably some position clamping stuff?
+        let movement = match &self.movement {
+            Movement::Walk(walk) => walk as &dyn MovementBackend,
+            Movement::Fly(fly) => fly as &dyn MovementBackend,
+        };
 
-        let input_vel = self.get_input_vel_xz(input_state);
-        self.body.velocity = input_vel.with_y(self.body.velocity.y);
+        let input_vel = movement.velocity_from_input(input_state, &self.camera, self.move_speed);
+        self.body.velocity = match &self.movement {
+            Movement::Walk(_) => input_vel.with_y(self.body.velocity.y),
+            Movement::Fly(_) => input_vel,
+        };
 
         self.body.accumulator += frame_delta;
         while self.body.accumulator > PHYSICS_DT {
-            let is_colliding = world.is_colliding(&self.body);
-
-            if !is_colliding {
-                self.body.velocity.y += GRAVITY * PHYSICS_DT;
-            } else {
-                self.body.velocity.y = 0.;
-            }
-
-            if input_state.up.just_pressed && is_colliding {
-                self.body.velocity.y = get_initial_jump_vel(DEFAULT_PLAYER_JUMP_HEIGHT);
-            }
-
-            self.body.position += self.body.velocity * PHYSICS_DT;
+            movement.tick(&mut self.body, world, input_state, PHYSICS_DT);
             self.body.accumulator -= PHYSICS_DT;
         }
 
@@ -96,14 +95,6 @@ impl Player {
         self.camera.update_vectors();
     }
 
-    /// Calculates the velocity vector of the players input state
-    // TODO: jumping?
-    fn get_input_vel_xz(&self, input_state: &mut InputState) -> Vec3 {
-        let input_vel = input_state.as_vel();
-        let input_vel_transformed = (self.camera.front * input_vel.x) + (self.camera.right * input_vel.z);
-        input_vel_transformed * self.move_speed
-    }
-
     /// Converts a body position (feet) to head/camera position (eye level).
     fn get_eye_pos_from_body_pos(&self, body_pos: Vec3) -> Vec3 {
         // Eye level is roughly 90% of body height from the feet
@@ -124,10 +115,4 @@ impl Player {
 
         self.get_eye_pos_from_body_pos(body_pos)
     }
-}
-
-/// Get the initial velocity of a jump that will reach height `h`
-fn get_initial_jump_vel(h: f32) -> f32 {
-    assert!(h >= 0., "Jump height must be >= 0");
-    (2. * h * GRAVITY.abs()).sqrt()
 }
