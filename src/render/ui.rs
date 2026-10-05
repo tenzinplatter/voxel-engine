@@ -7,7 +7,7 @@ use crate::{
         block::BlockType,
         game::{GameResources, GameState},
     },
-    get_crosshair_verticies,
+    get_crosshair_vertices, get_fps_vertices,
     render::{
         mesh::Mesh,
         renderer::{Renderer, Viewport},
@@ -31,7 +31,8 @@ impl UIRenderer {
     }
 
     fn build_mesh(game: &GameState, resources: &GameResources, viewport: &Viewport) -> Mesh {
-        let mut vertices: Vec<Vertex2D> = get_crosshair_verticies(resources, viewport).to_vec();
+        let mut vertices: Vec<Vertex2D> = get_crosshair_vertices(resources, viewport).to_vec();
+        vertices.extend(get_fps_vertices(resources, viewport, *game.state.fps.get()));
         vertices.extend(resources.get_vertices_for_block_face(
             *game.state.selected_block_type.get(),
             Vec2::new(50., viewport.height as f32 - 50.),
@@ -50,7 +51,8 @@ impl UIRenderer {
         resources: &GameResources,
         viewport: &Viewport,
     ) -> bool {
-        if self.selected_block_type.take_dirty().is_some() {
+        if self.selected_block_type.take_dirty().is_some() || game.state.fps.take_dirty().is_some()
+        {
             self.mesh = Self::build_mesh(game, resources, viewport);
             true
         } else {

@@ -61,6 +61,8 @@ fn main() -> Result<()> {
         // Calculate delta time
         let delta_time = get_delta_time(&sdl, last_frame_time);
         last_frame_time = sdl.get_ticks();
+        let fps = (1.0 / delta_time) as u32;
+        game.state.fps.set_if_changed(fps);
 
         setup_3d_rendering();
 

@@ -52,7 +52,8 @@ impl TextureAtlas {
     pub fn try_parse_atlas() -> Result<Self> {
         let textures = get_textures()?;
 
-        let (atlas_pixels_buf, (atlas_width_px, atlas_height_px)) = generate_texture_atlas_pixels(&textures)?;
+        let (atlas_pixels_buf, (atlas_width_px, atlas_height_px)) =
+            generate_texture_atlas_pixels(&textures)?;
         let textures = get_textures_as_uv(textures, atlas_width_px, atlas_height_px);
 
         let dbg_img_dir = Path::new("/home/tenzin/.cache/voxel-engine");
@@ -117,7 +118,9 @@ fn get_textures_as_uv(
 }
 
 /// @return (pixel_buffer, (width, height))
-fn generate_texture_atlas_pixels(textures: &BTreeMap<String, TextureAtlasKeyEntry>) -> Result<(Vec<u8>, (usize, usize))> {
+fn generate_texture_atlas_pixels(
+    textures: &BTreeMap<String, TextureAtlasKeyEntry>,
+) -> Result<(Vec<u8>, (usize, usize))> {
     // width and height in pixels
     let (width_px, height_px) = (1024, 1024);
     let size = width_px * height_px * 4;
@@ -149,12 +152,17 @@ fn generate_texture_atlas_pixels(textures: &BTreeMap<String, TextureAtlasKeyEntr
             );
         }
 
-        let top_left_px = UVec2::new((i % width_px) as u32 * TEXTURE_SIZE_PX as u32, (i / height_px) as u32);
+        let top_left_px = UVec2::new(
+            (i % width_px) as u32 * TEXTURE_SIZE_PX as u32,
+            (i / height_px) as u32,
+        );
 
         // TODO: write padding to each texture to remove border artifacts
         for n in 0..TEXTURE_SIZE_PX {
             // standard offset for 2D coord -> 1D
-            let dest_offset_px = (top_left_px.x + (top_left_px.y * TEXTURE_SIZE_PX as u32 * width_px as u32)) as usize;
+            let dest_offset_px = (top_left_px.x
+                + (top_left_px.y * TEXTURE_SIZE_PX as u32 * width_px as u32))
+                as usize;
             let dest_offset = (dest_offset_px + (n * width_px)) * BYTES_PER_PX;
 
             // same thing, we just are always copying blocks of 16 (a row)
@@ -175,13 +183,14 @@ fn generate_texture_atlas_pixels(textures: &BTreeMap<String, TextureAtlasKeyEntr
 fn write_image_from_pixels<P: AsRef<Path>>(pixels: &[u8], path: P) {
     // Assumes the image is square and 4 bytes per pixel (RGBA)
     let side = (pixels.len() / 4).isqrt() as u32;
-    let img: ImageBuffer<Rgba<u8>, _> =
-        ImageBuffer::from_raw(side, side, pixels.to_vec()).expect("Failed to create image buffer from raw pixels");
+    let img: ImageBuffer<Rgba<u8>, _> = ImageBuffer::from_raw(side, side, pixels.to_vec())
+        .expect("Failed to create image buffer from raw pixels");
     img.save(path).expect("Failed to save image");
 }
 
 fn get_texture_dirs() -> Result<Vec<PathBuf>> {
-    Ok(read_dir(TEXTURES_DIR)?
+    Ok(read_dir(TEXTURES_DIR)
+        .context(format!("texture dir: {TEXTURES_DIR}"))?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
         .filter(|path| path.is_dir())
@@ -195,8 +204,8 @@ fn get_textures() -> Result<BTreeMap<String, TextureAtlasKeyEntry>> {
     for dir in &texture_dirs {
         info!("Found texture dir: {:?}", dir);
         let key_path = dir.join("key.json");
-        let contents =
-            std::fs::read_to_string(&key_path).with_context(|| format!("Failed to read texture atlas key at {:?}", key_path))?;
+        let contents = std::fs::read_to_string(&key_path)
+            .with_context(|| format!("Failed to read texture atlas key at {:?}", key_path))?;
         let entries = serde_json::from_str::<BTreeMap<String, TextureAtlasKeyEntry>>(&contents)
             .with_context(|| format!("Failed to parse texture atlas key at {:?}", key_path))?;
 

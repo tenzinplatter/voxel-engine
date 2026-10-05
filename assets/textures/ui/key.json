@@ -1,5 +1,35 @@
 {
   "crosshair": {
     "img": "crosshair.png"
+  },
+  "digit_0": {
+    "img": "digit_0.png"
+  },
+  "digit_1": {
+    "img": "digit_1.png"
+  },
+  "digit_2": {
+    "img": "digit_2.png"
+  },
+  "digit_3": {
+    "img": "digit_3.png"
+  },
+  "digit_4": {
+    "img": "digit_4.png"
+  },
+  "digit_5": {
+    "img": "digit_5.png"
+  },
+  "digit_6": {
+    "img": "digit_6.png"
+  },
+  "digit_7": {
+    "img": "digit_7.png"
+  },
+  "digit_8": {
+    "img": "digit_8.png"
+  },
+  "digit_9": {
+    "img": "digit_9.png"
   }
 }

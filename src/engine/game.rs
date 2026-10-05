@@ -3,7 +3,7 @@ use std::rc::Rc;
 use anyhow::Result;
 use beryllium::{
     Sdl,
-    events::{self, SDLK_v},
+    events::{self},
 };
 use glam::{IVec3, Vec2, Vec3};
 
@@ -35,6 +35,7 @@ pub struct State {
     pub current_player: Option<PlayerState>,
     pub looking_at_vox_pos: Option<IVec3>,
     pub selected_block_type: Rc<Tracked<BlockType>>,
+    pub fps: Rc<Tracked<u32>>,
 }
 
 impl GameResources {
@@ -58,7 +59,7 @@ impl GameResources {
             .unwrap_or_else(|| panic!("No texture for block type: {}", block_type.as_str()))
             .to_uvs();
 
-        verticies_from_center_and_size(center, size, uvs)
+        vertices_from_center_and_size(center, size, uvs)
     }
 }
 
@@ -161,32 +162,13 @@ impl GameState {
     }
 }
 
-pub fn verticies_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
-    let half_size = size / 2.0;
-    [
-        Vertex2D {
-            position: Vec2::new(center.x - half_size, center.y - half_size),
-            tex: uvs[0],
-        },
-        Vertex2D {
-            position: Vec2::new(center.x + half_size, center.y - half_size),
-            tex: uvs[1],
-        },
-        Vertex2D {
-            position: Vec2::new(center.x + half_size, center.y + half_size),
-            tex: uvs[2],
-        },
-        Vertex2D {
-            position: Vec2::new(center.x + half_size, center.y + half_size),
-            tex: uvs[2],
-        },
-        Vertex2D {
-            position: Vec2::new(center.x - half_size, center.y + half_size),
-            tex: uvs[3],
-        },
-        Vertex2D {
-            position: Vec2::new(center.x - half_size, center.y - half_size),
-            tex: uvs[0],
-        },
-    ]
+pub fn vertices_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
+    let half = Vec2::splat(size / 2.0);
+    let corners = [Vec2::new(-1., -1.), Vec2::new(1., -1.), Vec2::ONE, Vec2::new(-1., 1.)]
+        .map(|sign| center + sign * half);
+
+    [0, 1, 2, 2, 3, 0].map(|i| Vertex2D {
+        position: corners[i],
+        tex: uvs[i],
+    })
 }
