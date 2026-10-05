@@ -32,7 +32,7 @@ impl UIRenderer {
 
     fn build_mesh(game: &GameState, resources: &GameResources, viewport: &Viewport) -> Mesh {
         let mut vertices: Vec<Vertex2D> = get_crosshair_verticies(resources, viewport).to_vec();
-        vertices.extend(resources.get_verticies_for_block_face(
+        vertices.extend(resources.get_vertices_for_block_face(
             *game.state.selected_block_type.get(),
             Vec2::new(50., viewport.height as f32 - 50.),
         ));

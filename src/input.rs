@@ -54,12 +54,13 @@ impl InputState {
             f32::from(positive.is_pressed) - f32::from(negative.is_pressed)
         }
 
-        Vec3::new(
+        let vel = Vec3::new(
             axis(&self.forward, &self.back),
             f32::from(self.up.is_pressed),
             axis(&self.right, &self.left),
-        )
-        .normalize()
+        );
+
+        vel.try_normalize().unwrap_or(vel)
     }
 
     /// Updates the state when a key is pressed or released.

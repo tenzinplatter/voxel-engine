@@ -56,7 +56,6 @@ impl Player {
         world: &World,
         frame_delta: f32,
         input_state: &mut InputState,
-        last_player_state: Option<&PlayerState>,
     ) -> PhysicsBody {
         if input_state.movement_toggle.just_pressed {
             self.movement = match &self.movement {
@@ -82,7 +81,7 @@ impl Player {
             self.body.accumulator -= PHYSICS_DT;
         }
 
-        self.camera.position = self.get_updated_camera_pos(last_player_state);
+        self.camera.position = self.get_updated_camera_pos();
         self.camera.update_vectors();
         self.body.clone()
     }
@@ -109,17 +108,7 @@ impl Player {
     }
 
     /// Returns the interpolated camera position for smooth rendering.
-    fn get_updated_camera_pos(&self, last_player_state: Option<&PlayerState>) -> Vec3 {
-        let body_pos = if self.body.accumulator >= 0.
-            && let Some(last) = last_player_state
-        {
-            let last = last.body.position;
-            let curr = self.body.position;
-            last + (curr - last) * self.body.accumulator / PHYSICS_DT
-        } else {
-            self.body.position
-        };
-
-        self.get_eye_pos_from_body_pos(body_pos)
+    fn get_updated_camera_pos(&self) -> Vec3 {
+        self.get_eye_pos_from_body_pos(self.body.position)
     }
 }

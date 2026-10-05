@@ -32,7 +32,6 @@ pub struct GameResources {
 
 #[derive(Default)]
 pub struct State {
-    pub last_player: Option<PlayerState>,
     pub current_player: Option<PlayerState>,
     pub looking_at_vox_pos: Option<IVec3>,
     pub selected_block_type: Rc<Tracked<BlockType>>,
@@ -45,7 +44,7 @@ impl GameResources {
         })
     }
 
-    pub fn get_verticies_for_block_face(
+    pub fn get_vertices_for_block_face(
         &self,
         block_type: BlockType,
         center: Vec2,
@@ -127,12 +126,8 @@ impl GameState {
     }
 
     pub fn update_player_and_world(&mut self, delta_time: f32) {
-        self.state.last_player = Some(PlayerState::new(self.player.step(
-            &self.world,
-            delta_time,
-            &mut self.input_state,
-            self.state.last_player.as_ref(),
-        )));
+        self.player
+            .step(&self.world, delta_time, &mut self.input_state);
     }
 
     pub fn handle_mouse_presses(&mut self, hit_info: &HitInfo) {
