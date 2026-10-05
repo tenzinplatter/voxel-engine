@@ -1,16 +1,16 @@
 use std::rc::Rc;
 
 use anyhow::Result;
-use beryllium::{Sdl, events};
+use beryllium::{
+    Sdl,
+    events::{self, SDLK_v},
+};
 use glam::{IVec3, Vec2, Vec3};
 
 use crate::{
     engine::{block::BlockType, world::World},
     input::InputState,
-    physics::{
-        colliding_with_voxel_from_pos, dda::get_looking_at_vox_pos,
-        hit_info::HitInfo,
-    },
+    physics::{colliding_with_voxel_from_pos, dda::get_looking_at_vox_pos, hit_info::HitInfo},
     player::{Player, PlayerState},
     render::{
         atlas::{TEXTURE_SIZE_PX, TextureAtlas},

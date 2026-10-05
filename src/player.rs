@@ -58,6 +58,13 @@ impl Player {
         input_state: &mut InputState,
         last_player_state: Option<&PlayerState>,
     ) -> PhysicsBody {
+        if input_state.movement_toggle.just_pressed {
+            self.movement = match &self.movement {
+                Movement::Walk(_) => Movement::fly(),
+                Movement::Fly(_) => Movement::walk(),
+            }
+        }
+
         let movement = match &self.movement {
             Movement::Walk(walk) => walk as &dyn MovementBackend,
             Movement::Fly(fly) => fly as &dyn MovementBackend,

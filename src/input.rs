@@ -17,7 +17,7 @@ pub enum MovementKeys {
     Down,
 }
 
-/// Represents the key events that occured in a single frame
+/// Represents the key events that occurred in a single frame
 #[derive(Default, Debug)]
 pub struct InputState {
     pub forward: KeyState,
@@ -28,6 +28,7 @@ pub struct InputState {
     pub mb1: KeyState,
     pub mb3: KeyState,
     pub number_keys: [KeyState; 10],
+    pub movement_toggle: KeyState,
 }
 
 impl KeyState {
@@ -76,12 +77,14 @@ impl InputState {
 
     /// Updates the state when a key is pressed or released.
     pub fn set_key(&mut self, keycode: SDL_Keycode, pressed: bool) {
+        // TODO: make this a macro
         #[allow(non_upper_case_globals)]
         match keycode {
             SDLK_w => self.forward = KeyState::from_pressed_last_and_curr(self.forward.is_pressed, pressed),
             SDLK_s => self.back = KeyState::from_pressed_last_and_curr(self.back.is_pressed, pressed),
             SDLK_a => self.left = KeyState::from_pressed_last_and_curr(self.left.is_pressed, pressed),
             SDLK_d => self.right = KeyState::from_pressed_last_and_curr(self.right.is_pressed, pressed),
+            SDLK_m => self.movement_toggle = KeyState::from_pressed_last_and_curr(self.movement_toggle.is_pressed, pressed),
             SDLK_SPACE => self.up = KeyState::from_pressed_last_and_curr(self.up.is_pressed, pressed),
             SDLK_1 => self.number_keys[0] = KeyState::from_pressed_last_and_curr(self.number_keys[0].is_pressed, pressed),
             SDLK_2 => self.number_keys[1] = KeyState::from_pressed_last_and_curr(self.number_keys[1].is_pressed, pressed),
