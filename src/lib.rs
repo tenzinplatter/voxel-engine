@@ -1,9 +1,12 @@
+use std::collections::BTreeMap;
+
 use beryllium::{video::GlWindow, *};
 use glam::{Vec2, Vec3};
 
 use crate::{
     engine::game::{GameResources, GameState, vertices_from_center_and_size},
     render::{
+        atlas::{TextureAtlasEntry, TextureMap},
         camera::Camera,
         debug_line::draw_debug_line,
         renderer::{Renderer, Viewport},
@@ -112,48 +115,3 @@ pub fn draw_axis(camera: &Camera, viewport: &Viewport) {
     );
 }
 
-fn get_crosshair_vertices(resources: &GameResources, viewport: &Viewport) -> [Vertex2D; 6] {
-    let crosshair_size = 16.0;
-    let center = Vec2::new(viewport.width as f32 / 2.0, viewport.height as f32 / 2.0);
-
-    let uvs = resources
-        .atlas
-        .textures
-        .get("crosshair")
-        .expect("Crosshair texture missing from atlas")
-        .to_uvs();
-
-    vertices_from_center_and_size(center, crosshair_size, uvs)
-}
-
-fn get_fps_vertices(resources: &GameResources, viewport: &Viewport, fps: u32) -> Vec<Vertex2D> {
-    // try from to skip the '.'
-    let s = format!("{fps}");
-    let digits = s.chars().filter_map(|c| c.to_digit(10));
-    let center = Vec2::new(viewport.width as f32 - 50.0, 50.0);
-    digits
-        .enumerate()
-        .flat_map(|(i, d)| {
-            let center = center.with_x(center.x + (i * 12) as f32);
-            get_digit_vertices(resources, d, center)
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_digit_vertices(resources: &GameResources, digit: u32, center: Vec2) -> [Vertex2D; 6] {
-    assert!(
-        matches!(digit, 0..=9),
-        "Should not pass a value not in 0..=9 to get_digit_vertices: {digit}"
-    );
-
-    let digit_size = 16.0;
-
-    let uvs = resources
-        .atlas
-        .textures
-        .get(&format!("digit_{digit}"))
-        .expect("Crosshair texture missing from atlas")
-        .to_uvs();
-
-    vertices_from_center_and_size(center, digit_size, uvs)
-}

@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use anyhow::Result;
 use beryllium::{
     Sdl,
@@ -14,6 +12,7 @@ use crate::{
     player::{Player, PlayerState},
     render::{
         atlas::{TEXTURE_SIZE_PX, TextureAtlas},
+        renderer::Viewport,
         vertex::Vertex2D,
     },
     utils::tracked::Tracked,
@@ -60,6 +59,51 @@ impl GameResources {
             .to_uvs();
 
         vertices_from_center_and_size(center, size, uvs)
+    }
+
+    pub fn get_crosshair_vertices(&self, center: Vec2) -> [Vertex2D; 6] {
+        let crosshair_size = 16.0;
+        let uvs = self
+            .atlas
+            .textures
+            .get("crosshair")
+            .expect("Crosshair texture missing from atlas")
+            .to_uvs();
+
+        vertices_from_center_and_size(center, crosshair_size, uvs)
+    }
+
+    pub fn get_fps_vertices(&self, center: Vec2, fps: u32) -> Vec<Vertex2D> {
+        let s = format!("{fps}");
+        let digits = s.chars().map(|c| {
+            c.to_digit(10)
+                .expect("There shouldn't be any non digit chars here")
+        });
+        digits
+            .enumerate()
+            .flat_map(|(i, d)| {
+                let center = center.with_x(center.x + (i * 12) as f32);
+                self.get_digit_vertices(d, center)
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_digit_vertices(&self, digit: u32, center: Vec2) -> [Vertex2D; 6] {
+        assert!(
+            matches!(digit, 0..=9),
+            "Should not pass a value not in 0..=9 to get_digit_vertices: {digit}"
+        );
+
+        let digit_size = 16.0;
+
+        let uvs = self
+            .atlas
+            .textures
+            .get(&format!("digit_{digit}"))
+            .expect("Crosshair texture missing from atlas")
+            .to_uvs();
+
+        vertices_from_center_and_size(center, digit_size, uvs)
     }
 }
 

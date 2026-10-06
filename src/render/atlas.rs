@@ -17,9 +17,11 @@ const BYTES_PER_PX: usize = 4;
 pub const TEXTURE_SIZE_PX: usize = 32;
 const TEXTURE_SIZE_PX_WITH_PADDING: usize = TEXTURE_SIZE_PX + 2;
 
+pub type TextureMap = BTreeMap<String, TextureAtlasEntry>;
+
 pub struct TextureAtlas {
     pub size: Vec2,
-    pub textures: BTreeMap<String, TextureAtlasEntry>,
+    pub textures: TextureMap,
     pub texture: Texture,
 }
 

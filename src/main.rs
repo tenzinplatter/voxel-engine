@@ -7,7 +7,7 @@ use voxel_engine::{
     engine::game::{GameResources, GameState},
     get_delta_time,
     render::{
-        PolygonMode, clear_color, polygon_mode,
+        PolygonMode, clear_color, clear_screen, polygon_mode,
         renderer::{Renderer, Viewport},
         setup_3d_rendering,
         ui::UIRenderer,
@@ -38,7 +38,6 @@ fn main() -> Result<()> {
         height: drawable_height,
     };
 
-    // Set viewport to match actual drawable size
     unsafe {
         glViewport(0, 0, drawable_width, drawable_height);
     }
@@ -54,11 +53,9 @@ fn main() -> Result<()> {
     clear_color(0.2, 0.3, 0.3, 1.0);
     polygon_mode(PolygonMode::Fill);
 
-    // Delta time tracking
     let mut last_frame_time = sdl.get_ticks();
 
     'main_loop: loop {
-        // Calculate delta time
         let delta_time = get_delta_time(&sdl, last_frame_time);
         last_frame_time = sdl.get_ticks();
         let fps = (1.0 / delta_time) as u32;
@@ -67,10 +64,7 @@ fn main() -> Result<()> {
         }
 
         setup_3d_rendering();
-
-        unsafe {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        }
+        clear_screen();
 
         if game.process_input_events(&sdl) {
             break 'main_loop;

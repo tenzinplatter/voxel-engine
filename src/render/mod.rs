@@ -6,8 +6,8 @@ pub mod mesh;
 pub mod renderer;
 pub mod shader;
 pub mod texture;
-pub mod vertex;
 pub mod ui;
+pub mod vertex;
 
 use gl33::{global_loader::*, *};
 
@@ -46,5 +46,11 @@ pub fn setup_2d_rendering() {
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+}
+
+pub fn clear_screen() {
+    unsafe {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 }
