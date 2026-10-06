@@ -34,8 +34,8 @@ pub struct GameResources {
 pub struct State {
     pub current_player: Option<PlayerState>,
     pub looking_at_vox_pos: Option<IVec3>,
-    pub selected_block_type: Rc<Tracked<BlockType>>,
-    pub fps: Rc<Tracked<u32>>,
+    pub selected_block_type: Tracked<BlockType>,
+    pub fps: Tracked<u32>,
 }
 
 impl GameResources {
@@ -157,15 +157,20 @@ impl GameState {
         }
 
         self.world
-            .set_voxel(to_place, *self.state.selected_block_type.get());
+            .set_voxel(to_place, *self.state.selected_block_type);
         true
     }
 }
 
 pub fn vertices_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
     let half = Vec2::splat(size / 2.0);
-    let corners = [Vec2::new(-1., -1.), Vec2::new(1., -1.), Vec2::ONE, Vec2::new(-1., 1.)]
-        .map(|sign| center + sign * half);
+    let corners = [
+        Vec2::new(-1., -1.),
+        Vec2::new(1., -1.),
+        Vec2::ONE,
+        Vec2::new(-1., 1.),
+    ]
+    .map(|sign| center + sign * half);
 
     [0, 1, 2, 2, 3, 0].map(|i| Vertex2D {
         position: corners[i],
