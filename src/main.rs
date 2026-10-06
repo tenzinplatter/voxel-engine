@@ -61,12 +61,11 @@ fn main() -> Result<()> {
             game.world.rebuild_mesh(&resources);
         }
 
+        game.reset();
+
         render_world(&mut game, &renderer, &viewport);
-
         draw_axis(&game.player.camera, &viewport);
-
         ui_renderer.render(&game, &resources, &renderer, &viewport);
-
         win.swap_window();
     }
 

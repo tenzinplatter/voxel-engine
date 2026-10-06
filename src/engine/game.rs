@@ -122,6 +122,10 @@ impl GameState {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.input_state.reset();
+    }
+
     /// Processes input events, updating the player and input state accordingly.
     /// Returns whether a quit event was received.
     pub fn process_input_events(&mut self, sdl: &Sdl) -> bool {

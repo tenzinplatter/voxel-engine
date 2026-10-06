@@ -2,13 +2,6 @@ use beryllium::events::*;
 use glam::Vec3;
 use tracing::warn;
 
-#[derive(Default, Debug)]
-pub struct KeyState {
-    pub is_pressed: bool,
-    pub just_pressed: bool,
-    pub just_released: bool,
-}
-
 pub enum MovementKeys {
     Forward,
     Back,
@@ -16,6 +9,33 @@ pub enum MovementKeys {
     Right,
     Up,
     Down,
+}
+
+#[derive(Default, Debug)]
+pub struct KeyState {
+    pub is_pressed: bool,
+    pub just_pressed: bool,
+    pub just_released: bool,
+}
+
+impl KeyState {
+    pub fn end_frame(&mut self) {
+        self.just_pressed = false;
+        self.just_released = false;
+    }
+
+    /// Creates a key state by comparing previous and current press states.
+    fn from_pressed_last_and_curr(last_pressed: bool, curr_pressed: bool) -> Self {
+        Self {
+            is_pressed: curr_pressed,
+            just_pressed: !last_pressed && curr_pressed,
+            just_released: last_pressed && !curr_pressed,
+        }
+    }
+
+    fn update(&mut self, pressed: bool) {
+        *self = dbg!(Self::from_pressed_last_and_curr(self.is_pressed, pressed));
+    }
 }
 
 /// Represents the key events that occurred in a single frame
@@ -32,22 +52,29 @@ pub struct InputState {
     pub movement_toggle: KeyState,
 }
 
-impl KeyState {
-    /// Creates a key state by comparing previous and current press states.
-    fn from_pressed_last_and_curr(last_pressed: bool, curr_pressed: bool) -> Self {
-        Self {
-            is_pressed: curr_pressed,
-            just_pressed: !last_pressed && curr_pressed,
-            just_released: last_pressed && !curr_pressed,
-        }
-    }
-
-    fn update(&mut self, pressed: bool) {
-        *self = Self::from_pressed_last_and_curr(self.is_pressed, pressed);
-    }
-}
-
 impl InputState {
+    fn keys_mut(&mut self) -> impl Iterator<Item = &mut KeyState> {
+        let Self {
+            forward,
+            back,
+            left,
+            right,
+            up,
+            mb1,
+            mb3,
+            number_keys,
+            movement_toggle,
+        } = self;
+
+        [forward, back, left, right, up, mb1, mb3, movement_toggle]
+            .into_iter()
+            .chain(number_keys)
+    }
+
+    pub fn reset(&mut self) {
+        self.keys_mut().for_each(KeyState::end_frame);
+    }
+
     /// Converts the current input state to a normalized velocity vector.
     pub fn as_vel(&self) -> Vec3 {
         fn axis(positive: &KeyState, negative: &KeyState) -> f32 {
