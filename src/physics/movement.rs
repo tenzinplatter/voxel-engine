@@ -23,6 +23,15 @@ pub enum Movement {
     Fly(Fly),
 }
 
+impl<'a> AsRef<dyn MovementBackend + 'a> for Movement {
+    fn as_ref(&self) -> &(dyn MovementBackend + 'a) {
+        match self {
+            Self::Walk(walk) => walk as &dyn MovementBackend,
+            Self::Fly(fly) => fly as &dyn MovementBackend,
+        }
+    }
+}
+
 impl Movement {
     pub fn walk() -> Self {
         Self::Walk(Walk)

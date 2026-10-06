@@ -7,25 +7,14 @@ use crate::{
         PHYSICS_DT, PhysicsBody,
         movement::{Movement, MovementBackend},
     },
-    render::camera::Camera, utils::types::Seconds,
+    render::camera::Camera,
+    utils::types::Seconds,
 };
 
 pub(crate) const DEFAULT_MOUSE_SENS: f32 = 0.1;
 pub(crate) const DEFAULT_PLAYER_SPEED: f32 = 6.0;
 pub(crate) const DEFAULT_PLAYER_JUMP_HEIGHT: f32 = 1.25;
 pub(crate) const DEFAULT_PLAYER_REACH: f32 = 5.0;
-
-#[derive(Debug)]
-pub struct PlayerState {
-    body: PhysicsBody,
-}
-
-impl PlayerState {
-    /// Creates a new player state snapshot from a physics body.
-    pub fn new(body: PhysicsBody) -> Self {
-        Self { body }
-    }
-}
 
 pub struct Player {
     pub body: PhysicsBody,
@@ -50,7 +39,15 @@ impl Player {
         }
     }
 
-    /// Updates the player for one frame, handling input, physics, and camera interpolation.
+    fn toggle_movement_mode(&mut self) {
+        self.movement = match &self.movement {
+            Movement::Walk(_) => Movement::fly(),
+            Movement::Fly(_) => Movement::walk(),
+        };
+        self.body.velocity = Vec3::ZERO;
+    }
+
+    /// Updates the player for one frame, handling input, physics
     pub fn step(
         &mut self,
         world: &World,
@@ -58,17 +55,10 @@ impl Player {
         input_state: &mut InputState,
     ) -> PhysicsBody {
         if input_state.movement_toggle.just_pressed {
-            self.movement = match &self.movement {
-                Movement::Walk(_) => Movement::fly(),
-                Movement::Fly(_) => Movement::walk(),
-            }
+            self.toggle_movement_mode();
         }
 
-        let movement = match &self.movement {
-            Movement::Walk(walk) => walk as &dyn MovementBackend,
-            Movement::Fly(fly) => fly as &dyn MovementBackend,
-        };
-
+        let movement: &dyn MovementBackend = self.movement.as_ref();
         let input_vel = movement.velocity_from_input(input_state, &self.camera, self.move_speed);
         self.body.velocity = match &self.movement {
             Movement::Walk(_) => input_vel.with_y(self.body.velocity.y),

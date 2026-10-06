@@ -9,7 +9,7 @@ use crate::{
     engine::{block::BlockType, world::World},
     input::InputState,
     physics::{colliding_with_voxel_from_pos, dda::get_looking_at_vox_pos, hit_info::HitInfo},
-    player::{Player, PlayerState},
+    player::Player,
     render::{
         atlas::{TEXTURE_SIZE_PX, TextureAtlas},
         vertex::Vertex2D,
@@ -30,7 +30,6 @@ pub struct GameResources {
 
 #[derive(Default)]
 pub struct State {
-    pub current_player: Option<PlayerState>,
     pub looking_at_vox_pos: Option<IVec3>,
     pub selected_block_type: Tracked<BlockType>,
     pub fps: Tracked<u32>,
