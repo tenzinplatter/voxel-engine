@@ -4,7 +4,10 @@ use anyhow::Result;
 use gl33::{global_loader::*, *};
 use voxel_engine::{
     draw_axis,
-    engine::game::{GameResources, GameState},
+    engine::{
+        FpsTracker,
+        game::{GameResources, GameState},
+    },
     get_delta_time,
     render::{
         PolygonMode, clear_color, clear_screen, polygon_mode,
@@ -24,23 +27,8 @@ const FRAG_SHADER_2D: &str = include_str!("../shaders/2d/fragment.glsl");
 fn main() -> Result<()> {
     env_logger::init();
 
-    let (sdl, win) = voxel_engine::init_sdl_and_win();
-
-    unsafe { load_global_gl(&|p_name| win.get_proc_address(p_name)) };
-
-    sdl.set_relative_mouse_mode(true).unwrap();
-    win.set_swap_interval(video::GlSwapInterval::Vsync).unwrap();
-
-    // Get actual drawable size (may differ from window size)
-    let (drawable_width, drawable_height) = win.get_drawable_size();
-    let viewport = Viewport {
-        width: drawable_width,
-        height: drawable_height,
-    };
-
-    unsafe {
-        glViewport(0, 0, drawable_width, drawable_height);
-    }
+    let (sdl, win) = voxel_engine::setup_sdl_and_window();
+    let viewport = voxel_engine::drawable_viewport(&win);
 
     let mut game = GameState::default();
     let resources = GameResources::build()?;
@@ -48,20 +36,14 @@ fn main() -> Result<()> {
         (VERT_SHADER_3D, FRAG_SHADER_3D),
         (VERT_SHADER_2D, FRAG_SHADER_2D),
     );
+
     let mut ui_renderer = UIRenderer::new(&game, &resources, &viewport);
-
-    clear_color(0.2, 0.3, 0.3, 1.0);
-    polygon_mode(PolygonMode::Fill);
-
-    let mut last_frame_time = sdl.get_ticks();
+    let mut fps_tracker = FpsTracker::new(3000);
+    fps_tracker.tick(sdl.get_ticks());
 
     'main_loop: loop {
-        let delta_time = get_delta_time(&sdl, last_frame_time);
-        last_frame_time = sdl.get_ticks();
-        let fps = (1.0 / delta_time) as u32;
-        if fps.abs_diff(*game.state.fps) > 3 {
-            *game.state.fps = fps;
-        }
+        let dt = fps_tracker.tick(sdl.get_ticks()) as f32 / 1000.0;
+        game.update_fps(fps_tracker.fps());
 
         setup_3d_rendering();
         clear_screen();
@@ -70,7 +52,7 @@ fn main() -> Result<()> {
             break 'main_loop;
         }
 
-        game.update_player_and_world(delta_time);
+        game.update_player_and_world(dt);
 
         if game.world.voxels.take_dirty() {
             game.world.rebuild_mesh(&resources);

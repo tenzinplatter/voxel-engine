@@ -1,16 +1,16 @@
-use std::collections::BTreeMap;
-
 use beryllium::{video::GlWindow, *};
-use glam::{Vec2, Vec3};
+use gl33::global_loader::{glViewport, load_global_gl};
+use glam::Vec3;
 
 use crate::{
-    engine::game::{GameResources, GameState, vertices_from_center_and_size},
+    engine::game::GameState,
     render::{
-        atlas::{TextureAtlasEntry, TextureMap},
+        PolygonMode,
         camera::Camera,
+        clear_color,
         debug_line::draw_debug_line,
+        polygon_mode,
         renderer::{Renderer, Viewport},
-        vertex::Vertex2D,
     },
 };
 
@@ -28,7 +28,7 @@ const HEIGHT: i32 = 900;
 const WINDOW_TITLE: &str = "(float)";
 
 /// Initializes SDL and creates an OpenGL window with default settings.
-pub fn init_sdl_and_win() -> (Sdl, GlWindow) {
+pub fn setup_sdl_and_window() -> (Sdl, GlWindow) {
     let sdl = Sdl::init(init::InitFlags::EVERYTHING);
 
     sdl.set_gl_context_major_version(3).unwrap();
@@ -50,7 +50,26 @@ pub fn init_sdl_and_win() -> (Sdl, GlWindow) {
     win.set_swap_interval(video::GlSwapInterval::Immediate)
         .unwrap();
 
+    unsafe { load_global_gl(&|p_name| win.get_proc_address(p_name)) };
+
+    sdl.set_relative_mouse_mode(true).unwrap();
+    win.set_swap_interval(video::GlSwapInterval::Vsync).unwrap();
+
+    clear_color(0.2, 0.3, 0.3, 1.0);
+    polygon_mode(PolygonMode::Fill);
+
     (sdl, win)
+}
+
+pub fn drawable_viewport(win: &GlWindow) -> Viewport {
+    let (drawable_width, drawable_height) = win.get_drawable_size();
+    unsafe {
+        glViewport(0, 0, drawable_width, drawable_height);
+    }
+    Viewport {
+        width: drawable_width,
+        height: drawable_height,
+    }
 }
 
 /// Converts degrees to radians.
@@ -114,4 +133,3 @@ pub fn draw_axis(camera: &Camera, viewport: &Viewport) {
         viewport,
     );
 }
-

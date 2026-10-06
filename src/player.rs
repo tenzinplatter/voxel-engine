@@ -7,7 +7,7 @@ use crate::{
         PHYSICS_DT, PhysicsBody,
         movement::{Movement, MovementBackend},
     },
-    render::camera::Camera,
+    render::camera::Camera, utils::types::Seconds,
 };
 
 pub(crate) const DEFAULT_MOUSE_SENS: f32 = 0.1;
@@ -54,7 +54,7 @@ impl Player {
     pub fn step(
         &mut self,
         world: &World,
-        frame_delta: f32,
+        frame_delta: Seconds,
         input_state: &mut InputState,
     ) -> PhysicsBody {
         if input_state.movement_toggle.just_pressed {

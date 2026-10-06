@@ -14,7 +14,7 @@ use crate::{
         atlas::{TEXTURE_SIZE_PX, TextureAtlas},
         vertex::Vertex2D,
     },
-    utils::tracked::Tracked,
+    utils::{tracked::Tracked, types::Seconds},
 };
 
 pub struct GameState {
@@ -117,6 +117,12 @@ impl Default for GameState {
 }
 
 impl GameState {
+    pub fn update_fps(&mut self, fps: u32) {
+        if fps.abs_diff(*self.state.fps) > 3 {
+            *self.state.fps = fps;
+        }
+    }
+
     /// Processes input events, updating the player and input state accordingly.
     /// Returns whether a quit event was received.
     pub fn process_input_events(&mut self, sdl: &Sdl) -> bool {
@@ -168,7 +174,7 @@ impl GameState {
         false
     }
 
-    pub fn update_player_and_world(&mut self, delta_time: f32) {
+    pub fn update_player_and_world(&mut self, delta_time: Seconds) {
         self.player
             .step(&self.world, delta_time, &mut self.input_state);
     }

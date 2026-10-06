@@ -1,11 +1,8 @@
-use std::time::SystemTime;
-
 use glam::{IVec3, Mat4};
 use noise::{NoiseFn, Perlin};
 
 use crate::{
-    GameResources,
-    engine::{block::BlockType, voxel::Voxel},
+    engine::{block::BlockType, game::GameResources, voxel::Voxel},
     physics::{PhysicsBody, colliding_with},
     render::mesh::Mesh,
     utils::tracked_map::TrackedHashMap,
