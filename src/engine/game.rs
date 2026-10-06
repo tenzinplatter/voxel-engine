@@ -12,7 +12,6 @@ use crate::{
     player::{Player, PlayerState},
     render::{
         atlas::{TEXTURE_SIZE_PX, TextureAtlas},
-        renderer::Viewport,
         vertex::Vertex2D,
     },
     utils::tracked::Tracked,
@@ -62,7 +61,7 @@ impl GameResources {
     }
 
     pub fn get_crosshair_vertices(&self, center: Vec2) -> [Vertex2D; 6] {
-        let crosshair_size = 16.0;
+        const CROSSHAIR_SIZE: f32 = 16.0;
         let uvs = self
             .atlas
             .textures
@@ -70,7 +69,7 @@ impl GameResources {
             .expect("Crosshair texture missing from atlas")
             .to_uvs();
 
-        vertices_from_center_and_size(center, crosshair_size, uvs)
+        vertices_from_center_and_size(center, CROSSHAIR_SIZE, uvs)
     }
 
     pub fn get_fps_vertices(&self, center: Vec2, fps: u32) -> Vec<Vertex2D> {
@@ -94,8 +93,7 @@ impl GameResources {
             "Should not pass a value not in 0..=9 to get_digit_vertices: {digit}"
         );
 
-        let digit_size = 16.0;
-
+        const DIGIT_SIZE: f32 = 16.0;
         let uvs = self
             .atlas
             .textures
@@ -103,7 +101,7 @@ impl GameResources {
             .expect("Crosshair texture missing from atlas")
             .to_uvs();
 
-        vertices_from_center_and_size(center, digit_size, uvs)
+        vertices_from_center_and_size(center, DIGIT_SIZE, uvs)
     }
 }
 
