@@ -2,6 +2,7 @@ use beryllium::*;
 
 use anyhow::Result;
 use gl33::{global_loader::*, *};
+use tracing_subscriber::EnvFilter;
 use voxel_engine::{
     draw_axis,
     engine::{
@@ -25,7 +26,9 @@ const VERT_SHADER_2D: &str = include_str!("../shaders/2d/vertex.glsl");
 const FRAG_SHADER_2D: &str = include_str!("../shaders/2d/fragment.glsl");
 
 fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .init();
 
     let (sdl, win) = voxel_engine::setup_sdl_and_window();
     let viewport = voxel_engine::drawable_viewport(&win);

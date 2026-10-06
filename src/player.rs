@@ -1,4 +1,5 @@
 use glam::Vec3;
+use tracing::debug;
 
 use crate::{
     engine::world::World,
@@ -44,6 +45,7 @@ impl Player {
             Movement::Walk(_) => Movement::fly(),
             Movement::Fly(_) => Movement::walk(),
         };
+        debug!(?self.movement, "swapped movement mode");
         self.body.velocity = Vec3::ZERO;
     }
 

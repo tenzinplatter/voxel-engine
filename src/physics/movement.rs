@@ -18,6 +18,7 @@ pub trait MovementBackend {
     ) -> Vec3;
 }
 
+#[derive(Debug)]
 pub enum Movement {
     Walk(Walk),
     Fly(Fly),
@@ -42,7 +43,7 @@ impl Movement {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Fly;
 
 impl MovementBackend for Fly {
@@ -66,7 +67,7 @@ impl MovementBackend for Fly {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Walk;
 
 impl MovementBackend for Walk {

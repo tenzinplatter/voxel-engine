@@ -1,6 +1,6 @@
 use beryllium::events::*;
 use glam::Vec3;
-use log::warn;
+use tracing::warn;
 
 #[derive(Default, Debug)]
 pub struct KeyState {
@@ -76,7 +76,7 @@ impl InputState {
             SDLK_1 => &mut self.number_keys[0],
             SDLK_2 => &mut self.number_keys[1],
             _ => {
-                warn!("Got unmapped key press: {keycode:?}");
+                warn!(?keycode, "unmapped key press");
                 return;
             }
         };
