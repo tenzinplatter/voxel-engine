@@ -54,7 +54,6 @@ fn main() -> Result<()> {
 
         game.update_selected_block(&input_state);
         game.handle_mouse(&input_state);
-        game.player.process_mouse(input_state.mouse_delta());
         game.update_player(dt, &input_state);
 
         if game.world.voxels.take_dirty() {

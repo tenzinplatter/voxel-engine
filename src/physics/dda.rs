@@ -43,15 +43,6 @@ pub fn get_looking_at_vox_pos(world: &World, player: &Player) -> Option<HitInfo>
         player.camera.front.normalize().into(),
     );
 
-    // TODO(human): Implement DDA voxel traversal using the DDAState iterator
-    // Loop through voxel positions, checking:
-    // 1. Is there a voxel at state.next_voxelpos?
-    // 2. Is state.hit_distance() within DEFAULT_PLAYER_REACH?
-    // 3. Convert state.hit_normal() (Vec3A) to HitFace enum
-    // 4. Skip the starting voxel (like the old implementation)
-    // Hint: state.step_mut() advances to the next voxel
-    // Hint: state.hit_normal() returns Vec3A with components like (-1, 0, 0) for NegX face
-
     while state.hit_distance() < DEFAULT_PLAYER_REACH {
         // step first to skip starting voxel
         state.step_mut();

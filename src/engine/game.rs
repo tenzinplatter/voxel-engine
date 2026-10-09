@@ -131,6 +131,7 @@ impl GameState {
     }
 
     pub fn update_player(&mut self, delta_time: Seconds, input_state: &InputState) {
+        self.player.process_mouse(input_state.mouse_delta());
         self.player.step(&self.world, delta_time, input_state);
     }
 
