@@ -1,5 +1,5 @@
 use anyhow::Result;
-use glam::{IVec3, Vec2, Vec3};
+use glam::{Vec2, Vec3};
 
 use crate::{
     engine::{block::BlockType, world::World},
@@ -25,7 +25,6 @@ pub struct GameResources {
 
 #[derive(Default)]
 pub struct State {
-    pub looking_at_vox_pos: Option<IVec3>,
     pub selected_block_type: Tracked<BlockType>,
     pub fps: Tracked<u32>,
 }
@@ -112,7 +111,6 @@ impl Default for GameState {
 impl GameState {
     pub fn handle_mouse(&mut self, input_state: &InputState) {
         let hit_info = get_looking_at_vox_pos(&self.world, &self.player);
-        self.state.looking_at_vox_pos = hit_info.map(|hit| hit.pos);
         if let Some(hit_info) = hit_info {
             self.handle_mouse_presses(&hit_info, input_state);
         }
