@@ -74,25 +74,3 @@ pub fn setup_texture_opts() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
     }
 }
-
-/// Flips the pixels in the `pixels` buf horizontally, assuming that they represent an image of
-/// width `width`
-fn flip_pixels_horizontal_inplace(pixels: &mut [u8], width: usize) {
-    // height
-    let nrows = pixels.len() / width;
-
-    if nrows % 2 == 1 {
-        // we have odd height atlas? how? should be power of 2
-        panic!("Recieved atlas with odd no. of rows");
-    }
-
-    // thing at the split index goes to right half, so we split on the first entry of the first row
-    // in the bottom half
-    let (top, bottom) = pixels.split_at_mut(width * (nrows / 2));
-
-    for (trow, brow) in top.chunks_mut(width).zip(bottom.chunks_mut(width).rev()) {
-        // NOTE: this will panic if slices are not same sized, i.e. pixels is not actually an image
-        // with width `width`
-        trow.swap_with_slice(brow);
-    }
-}

@@ -3,7 +3,7 @@ use tracing::debug;
 
 use crate::{
     engine::world::World,
-    input::InputState,
+    input::{InputState, Key, MouseDelta},
     physics::{
         PHYSICS_DT, PhysicsBody,
         movement::{Movement, MovementBackend},
@@ -54,14 +54,15 @@ impl Player {
         &mut self,
         world: &World,
         frame_delta: Seconds,
-        input_state: &mut InputState,
+        input_state: &InputState,
     ) -> PhysicsBody {
-        if input_state.movement_toggle.just_pressed {
+        if input_state.just_pressed(Key::ToggleMovement) {
             self.toggle_movement_mode();
         }
 
         let movement: &dyn MovementBackend = self.movement.as_ref();
-        let input_vel = movement.velocity_from_input(input_state, &self.camera, self.move_speed);
+        let input_vel =
+            movement.velocity_from_input(input_state.as_vel(), &self.camera, self.move_speed);
         self.body.velocity = match &self.movement {
             Movement::Walk(_) => input_vel.with_y(self.body.velocity.y),
             Movement::Fly(_) => input_vel,
@@ -69,7 +70,7 @@ impl Player {
 
         self.body.accumulator += frame_delta;
         while self.body.accumulator > PHYSICS_DT {
-            movement.tick(&mut self.body, world, input_state, PHYSICS_DT);
+            movement.tick(&mut self.body, world, input_state.get(Key::Up), PHYSICS_DT);
             self.body.accumulator -= PHYSICS_DT;
         }
 
@@ -79,12 +80,13 @@ impl Player {
     }
 
     /// Processes mouse movement to rotate the camera.
-    pub fn process_mouse(&mut self, x_offset: f32, y_offset: f32) {
-        let x_offset = x_offset * self.mouse_sensitivity * 0.01;
-        let y_offset = y_offset * self.mouse_sensitivity * 0.01;
+    pub fn process_mouse(&mut self, delta: MouseDelta) {
+        let MouseDelta { x, y } = delta;
+        let yaw_delta = x as f32 * self.mouse_sensitivity * 0.01;
+        let pitch_delta = -y as f32 * self.mouse_sensitivity * 0.01;
 
-        self.camera.yaw += x_offset;
-        self.camera.pitch += y_offset;
+        self.camera.yaw += yaw_delta;
+        self.camera.pitch += pitch_delta;
 
         // Constrain pitch to prevent gimbal lock
         const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01; // ~89 degrees

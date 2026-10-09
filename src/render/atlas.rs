@@ -15,7 +15,6 @@ use crate::render::texture::Texture;
 const TEXTURES_DIR: &str = "assets/textures/";
 const BYTES_PER_PX: usize = 4;
 pub const TEXTURE_SIZE_PX: usize = 32;
-const TEXTURE_SIZE_PX_WITH_PADDING: usize = TEXTURE_SIZE_PX + 2;
 
 pub type TextureMap = BTreeMap<String, TextureAtlasEntry>;
 

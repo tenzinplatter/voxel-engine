@@ -1,7 +1,4 @@
-use beryllium::*;
-
 use anyhow::Result;
-use gl33::{global_loader::*, *};
 use tracing_subscriber::EnvFilter;
 use voxel_engine::{
     draw_axis,
@@ -9,13 +6,8 @@ use voxel_engine::{
         FpsTracker,
         game::{GameResources, GameState},
     },
-    get_delta_time,
-    render::{
-        PolygonMode, clear_color, clear_screen, polygon_mode,
-        renderer::{Renderer, Viewport},
-        setup_3d_rendering,
-        ui::UIRenderer,
-    },
+    input::{InputState},
+    render::{clear_screen, renderer::Renderer, setup_3d_rendering, ui::UIRenderer},
     render_world,
 };
 
@@ -27,7 +19,9 @@ const FRAG_SHADER_2D: &str = include_str!("../shaders/2d/fragment.glsl");
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     let (sdl, win) = voxel_engine::setup_sdl_and_window();
@@ -39,6 +33,8 @@ fn main() -> Result<()> {
         (VERT_SHADER_3D, FRAG_SHADER_3D),
         (VERT_SHADER_2D, FRAG_SHADER_2D),
     );
+    let mut input_state = InputState::default();
+    input_state.register_defaults();
 
     let mut ui_renderer = UIRenderer::new(&game, &resources, &viewport);
     let mut fps_tracker = FpsTracker::new(3000);
@@ -51,17 +47,21 @@ fn main() -> Result<()> {
         setup_3d_rendering();
         clear_screen();
 
-        if game.process_input_events(&sdl) {
+        input_state.poll(&sdl);
+        if input_state.should_quit() {
             break 'main_loop;
         }
 
-        game.update_player_and_world(dt);
+        game.update_selected_block(&input_state);
+        game.handle_mouse(&input_state);
+        game.player.process_mouse(input_state.mouse_delta());
+        game.update_player(dt, &input_state);
 
         if game.world.voxels.take_dirty() {
             game.world.rebuild_mesh(&resources);
         }
 
-        game.reset();
+        input_state.end_frame();
 
         render_world(&mut game, &renderer, &viewport);
         draw_axis(&game.player.camera, &viewport);
