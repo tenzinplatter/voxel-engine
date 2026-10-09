@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     input_state.register_defaults();
 
     let mut ui_renderer = UIRenderer::new(&game, &resources, &viewport);
-    let mut fps_tracker = FpsTracker::new(3000);
+    let mut fps_tracker = FpsTracker::with_tracking_period(3000);
     fps_tracker.tick(sdl.get_ticks());
 
     'main_loop: loop {

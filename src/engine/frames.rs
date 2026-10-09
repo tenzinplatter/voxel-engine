@@ -19,7 +19,7 @@ impl Default for FpsTracker {
 }
 
 impl FpsTracker {
-    pub fn new(period: Milliseconds) -> Self {
+    pub fn with_tracking_period(period: Milliseconds) -> Self {
         Self {
             times: LinkedList::new(),
             period,
