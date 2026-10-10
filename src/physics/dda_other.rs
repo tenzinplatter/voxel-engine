@@ -32,7 +32,7 @@ pub struct DDAState {
     pub diff_voxelpos: IVec3, // = signum(dir)
 
     /// The next voxel position to be visited.
-    pub next_voxelpos: IVec3,
+    pub next_voxel_pos: IVec3,
 
     /// Per-component distance to next boundary plane.
     pub diff_boundary: Vec3A,
@@ -91,7 +91,7 @@ impl DDAState {
 
             max_boundary_mask: BVec3A::FALSE,
             next_boundary: next_dist,
-            next_voxelpos: ray_origin_grid_i,
+            next_voxel_pos: ray_origin_grid_i,
         }
     }
 
@@ -102,7 +102,7 @@ impl DDAState {
             .next_boundary
             .xyz()
             .cmple(self.next_boundary.yzx().min(self.next_boundary.zxy()));
-        self.next_voxelpos += self.diff_voxelpos * IVec3::from(self.max_boundary_mask);
+        self.next_voxel_pos += self.diff_voxelpos * IVec3::from(self.max_boundary_mask);
         self.next_boundary += self.diff_boundary * Vec3A::from(self.max_boundary_mask);
     }
 
@@ -140,7 +140,7 @@ impl DDAState {
     /// Local position of the hit on the next voxels boundary.
     #[inline(always)]
     pub fn hit_boundary(&self) -> Vec3A {
-        self.hit_position() - self.next_voxelpos.as_vec3a()
+        self.hit_position() - self.next_voxel_pos.as_vec3a()
     }
 
     /// Normal of the hit on the next voxels boundary.

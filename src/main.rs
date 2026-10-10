@@ -6,7 +6,7 @@ use voxel_engine::{
         FpsTracker,
         game::{GameResources, GameState},
     },
-    input::{InputState},
+    input::InputState,
     render::{clear_screen, renderer::Renderer, setup_3d_rendering, ui::UIRenderer},
     render_world,
 };
@@ -33,6 +33,7 @@ fn main() -> Result<()> {
         (VERT_SHADER_3D, FRAG_SHADER_3D),
         (VERT_SHADER_2D, FRAG_SHADER_2D),
     );
+
     let mut input_state = InputState::default();
     input_state.register_defaults();
 
@@ -42,7 +43,7 @@ fn main() -> Result<()> {
 
     'main_loop: loop {
         let dt = fps_tracker.tick(sdl.get_ticks()) as f32 / 1000.0;
-        game.update_fps(dbg!(fps_tracker.fps()));
+        game.update_fps(fps_tracker.fps());
 
         setup_3d_rendering();
         clear_screen();
@@ -53,7 +54,9 @@ fn main() -> Result<()> {
         }
 
         game.on_frame(&resources, dt, &input_state);
+        game.world.rebuild_dirty_chunks(&resources);
 
+        game.world.voxels.end_frame();
         input_state.end_frame();
 
         render_world(&mut game, &renderer, &viewport);

@@ -91,14 +91,9 @@ pub fn get_delta_time(sdl: &Sdl, last_frame_time: u32) -> f32 {
 }
 
 pub fn render_world(game: &mut GameState, renderer: &Renderer, viewport: &Viewport) {
-    renderer.render_mesh_3d(
-        game.world
-            .mesh
-            .as_ref()
-            .expect("Mesh shouldve been build on world init"),
-        &game.player.camera,
-        viewport,
-    );
+    for mesh in game.world.chunk_meshes.values() {
+        renderer.render_mesh_3d(mesh, &game.player.camera, viewport);
+    }
 }
 
 pub fn draw_axis(camera: &Camera, viewport: &Viewport) {
