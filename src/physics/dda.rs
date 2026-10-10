@@ -47,7 +47,7 @@ pub fn get_looking_at_vox_pos(world: &World, player: &Player) -> Option<HitInfo>
         // step first to skip starting voxel
         state.step_mut();
 
-        let curr_pos = state.next_voxelpos;
+        let curr_pos = state.next_voxel_pos;
         if world.voxels.contains_key(&curr_pos) {
             let normal = state.hit_normal();
             let face = if normal.x < 0.0 {

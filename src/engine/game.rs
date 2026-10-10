@@ -34,9 +34,7 @@ impl GameState {
         self.update_selected_block(input_state);
         self.handle_mouse(input_state);
         self.update_player(delta_time, input_state);
-        if self.world.voxels.take_dirty() {
-            self.world.rebuild_mesh(resources);
-        }
+        self.world.rebuild_dirty_chunks(resources);
 
     }
 

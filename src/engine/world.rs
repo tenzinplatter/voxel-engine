@@ -1,5 +1,4 @@
-use core::panic;
-use std::{collections::HashMap, ops::Div};
+use std::collections::HashMap;
 
 use glam::{IVec2, IVec3, Mat4, Vec3Swizzles};
 use itertools::iproduct;
@@ -13,75 +12,108 @@ use crate::{
 };
 
 const CHUNK_SIZE: i32 = 16;
+const WORLD_SIZE: i32 = 32;
+
+enum DirtyVoxel<'a> {
+    Exists(&'a Voxel),
+    Removed(IVec3),
+}
+
+impl<'a> DirtyVoxel<'a> {
+    fn xz(&self) -> IVec2 {
+        match self {
+            DirtyVoxel::Exists(voxel) => voxel.body.position.xz().as_ivec2(),
+            DirtyVoxel::Removed(ivec3) => ivec3.xz(),
+        }
+    }
+}
 
 pub struct World {
     pub voxels: TrackedHashMap<IVec3, Voxel>,
-    pub chunk_meshes: Vec<Mesh>,
+    pub chunk_meshes: HashMap<ChunkBorder, Mesh>,
 }
 
 pub struct ChunkData<'a> {
+    border: ChunkBorder,
     voxels: Vec<&'a Voxel>,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
-struct Rect {
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct ChunkBorder {
     bottom_left: IVec2,
     top_right: IVec2,
 }
 
 impl World {
     /// Rebuilds the world's mesh from all voxels, optionally using a new texture.
-    pub fn rebuild_mesh(&mut self, resources: &GameResources) {
-        let chunks = self.get_chunks();
+    pub fn rebuild_dirty_chunks(&mut self, resources: &GameResources) {
+        let chunk_mesh = |chunk: &ChunkData| -> Mesh {
+            println!("rebuilding chunk");
+            let vertices: Vec<_> = chunk
+                .voxels
+                .iter()
+                .flat_map(|vox| vox.get_vertices(resources))
+                .collect();
 
-        self.chunk_meshes = chunks
-            .into_iter()
-            .map(|chunk| {
-                let vertices: Vec<_> = chunk
-                    .voxels
-                    .iter()
-                    .flat_map(|vox| vox.get_vertices(resources))
-                    .collect();
+            Mesh::new(&vertices, Mat4::IDENTITY, resources.atlas.texture)
+        };
 
-                Mesh::new(&vertices, Mat4::IDENTITY, resources.atlas.texture)
-            })
+        let chunks = self.get_dirty_chunks();
+        let meshes_by_border: Vec<_> = chunks
+            .iter()
+            .map(|chunk| (chunk.border, chunk_mesh(chunk)))
             .collect();
+
+        for (border, mesh) in meshes_by_border {
+            if let Some(old) = self.chunk_meshes.get_mut(&border) {
+                *old = mesh;
+            } else {
+                self.chunk_meshes.insert(border, mesh);
+            }
+        }
     }
 
-    pub fn get_chunks(&self) -> Vec<ChunkData<'_>> {
-        fn bucket_from_pos<'a, 'b>(
-            chunks: &'a mut HashMap<Rect, Vec<&'b Voxel>>,
-            pos: IVec2,
-        ) -> &'a mut Vec<&'b Voxel> {
-            let chunk_bottom_left = pos.map(|v| v / CHUNK_SIZE * CHUNK_SIZE);
-            let chunk = Rect {
-                bottom_left: chunk_bottom_left,
-                top_right: chunk_bottom_left + CHUNK_SIZE,
-            };
-
-            chunks
-                .get_mut(&chunk)
-                .expect("Chunks should contain entries for every chunk that contains a voxel")
-        }
-
-        let chunk_rects = self.get_chunk_positions();
-        let mut chunks: HashMap<Rect, Vec<&Voxel>> =
+    pub fn get_dirty_chunks(&self) -> Vec<ChunkData<'_>> {
+        let chunk_rects = self.get_dirty_chunk_positions();
+        let mut chunks: HashMap<ChunkBorder, Vec<DirtyVoxel>> =
             chunk_rects.into_iter().map(|r| (r, Vec::new())).collect();
 
-        for vox in self.voxels.values() {
-            let pos = vox.body.position.xz().as_ivec2();
-            let bucket = bucket_from_pos(&mut chunks, pos);
+        for vox in self.dirty_voxels() {
+            let pos = vox.xz();
+            let chunk = chunk_pos_to_world_coords(world_to_chunk_pos(pos));
+            let bucket = chunks.get_mut(&chunk).expect("all chunks should have map entries here");
             bucket.push(vox);
         }
 
-        chunks.into_values().map(|voxels| ChunkData { voxels })
+        let dirty_chunks: Vec<_> = chunks
+            .iter()
+            .filter(|(_, voxels)| !voxels.is_empty())
+            .map(|(pos, _)| pos)
+            .collect();
+
+        let mut chunks: HashMap<ChunkBorder, Vec<&Voxel>> =
+            dirty_chunks.into_iter().map(|r| (*r, Vec::new())).collect();
+
+        for vox in self.voxels.values() {
+            let pos = vox.body.position.xz().as_ivec2();
+            let chunk = chunk_pos_to_world_coords(world_to_chunk_pos(pos));
+            if let Some(bucket) = chunks.get_mut(&chunk) {
+                bucket.push(vox);
+            }
+        }
+
+        chunks
+            .into_iter()
+            .map(|(border, voxels)| ChunkData { border, voxels })
             .collect()
     }
 
-    fn get_chunk_positions(&self) -> Vec<Rect> {
-        let world_border = self.get_world_border();
+    fn get_dirty_chunk_positions(&self) -> Vec<ChunkBorder> {
+        let Some(world_border) = self.get_dirty_world_border() else {
+            return Vec::new();
+        };
 
-        let top_right = world_to_chunk_pos(world_border.top_right);
+        let top_right = world_to_chunk_pos(world_border.top_right) + 1;
         let bottom_left = world_to_chunk_pos(world_border.bottom_left);
 
         let x_range = bottom_left.x..top_right.x;
@@ -91,27 +123,32 @@ impl World {
 
         bottom_lefts
             .into_iter()
-            .map(|(x, y)| {
-                let bottom_left = IVec2::new(x, y) * 16;
-                Rect {
-                    bottom_left,
-                    top_right: bottom_left + 16,
-                }
-            })
+            .map(IVec2::from)
+            .map(chunk_pos_to_world_coords)
             .collect()
     }
 
-    fn get_world_border(&self) -> Rect {
-        if self.voxels.len() < 2 {
-            panic!("World to small to generate border.");
+    fn get_dirty_world_border(&self) -> Option<ChunkBorder> {
+        let dirty = self.dirty_voxels();
+        if dirty.is_empty() {
+            return None;
+        }
+
+        // can't generate a border the same way with only one voxel, so we just find its chunk and
+        // return that as the border
+        // TODO: this could probably be refactored so this goes through the standard path, something
+        // like per vox find its chunk, then grow the world border by that
+        if dirty.len() == 1 {
+            let vox = dirty.first().expect("just checked len");
+            let chunk_idx = world_to_chunk_pos(vox.xz());
+            return Some(chunk_pos_to_world_coords(chunk_idx));
         }
 
         let mut top_right = IVec2::MIN;
         let mut bottom_left = IVec2::MAX;
 
-        for voxel in self.voxels.values() {
-            let IVec2 { x, y } = voxel.body.position.xz().as_ivec2();
-
+        for voxel in dirty {
+            let IVec2 { x, y } = voxel.xz();
             top_right.x = i32::max(top_right.x, x);
             top_right.y = i32::max(top_right.y, y);
 
@@ -119,10 +156,20 @@ impl World {
             bottom_left.y = i32::min(bottom_left.y, y);
         }
 
-        Rect {
+        Some(ChunkBorder {
             top_right,
             bottom_left,
-        }
+        })
+    }
+
+    fn dirty_voxels(&self) -> Vec<DirtyVoxel<'_>> {
+        self.voxels
+            .dirty()
+            .map(|k| match self.voxels.get(k) {
+                Some(vox) => DirtyVoxel::Exists(vox),
+                None => DirtyVoxel::Removed(*k),
+            })
+            .collect()
     }
 
     /// Adds a voxel at the given position, returning the old value if one existed.
@@ -146,9 +193,9 @@ impl World {
         let perlin = Perlin::new(1);
         let scale = 0.05;
 
-        let voxels = (-32..32)
+        let voxels = (-WORLD_SIZE..WORLD_SIZE)
             .flat_map(|z| {
-                (-32..32).flat_map(move |x| {
+                (-WORLD_SIZE..WORLD_SIZE).flat_map(move |x| {
                     let noise = perlin.get([x as f64 * scale, z as f64 * scale]);
                     let y = (noise * 10.0) as i32;
                     let stone_start = y - 3;
@@ -172,16 +219,16 @@ impl World {
 
         World {
             voxels,
-            chunk_meshes: Vec::new(),
+            chunk_meshes: HashMap::new(),
         }
     }
 }
 
 impl Default for World {
     fn default() -> Self {
-        let voxels = (-32..32)
+        let voxels = (-WORLD_SIZE..WORLD_SIZE)
             .flat_map(|z| {
-                (-32..32).map(move |x| {
+                (-WORLD_SIZE..WORLD_SIZE).map(move |x| {
                     let pos = IVec3::new(x, 0, z);
                     (pos, Voxel::new(pos, BlockType::Dirt))
                 })
@@ -190,11 +237,19 @@ impl Default for World {
 
         World {
             voxels,
-            chunk_meshes: Vec::new(),
+            chunk_meshes: HashMap::new(),
         }
     }
 }
 
 fn world_to_chunk_pos(vec: IVec2) -> IVec2 {
-    vec.as_vec2().div(16.0).ceil().as_ivec2()
+    vec.div_euclid(IVec2::splat(CHUNK_SIZE))
+}
+
+fn chunk_pos_to_world_coords(vec: IVec2) -> ChunkBorder {
+    let bottom_left = vec * 16;
+    ChunkBorder {
+        bottom_left,
+        top_right: bottom_left + 16,
+    }
 }

@@ -1,49 +1,48 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
+#[derive(Debug)]
 pub struct TrackedHashMap<K, V> {
     inner: HashMap<K, V>,
-    dirty: bool,
+    dirty_keys: HashSet<K>,
+    first_dirty_check: bool,
 }
 
-impl<K: Eq + Hash, V> FromIterator<(K, V)> for TrackedHashMap<K, V> {
+impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for TrackedHashMap<K, V> {
     fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
         let inner = iter.into_iter().collect();
         Self {
             inner,
-            dirty: true,
+            dirty_keys: HashSet::new(),
+            first_dirty_check: true,
         }
     }
 }
 
-impl<K: Eq + Hash, V> TrackedHashMap<K, V> {
-    pub fn new() -> Self {
-        Self {
-            inner: HashMap::new(),
-            dirty: false,
-        }
-    }
-
+impl<K: Eq + Hash + Clone, V> TrackedHashMap<K, V> {
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        self.dirty = true;
+        self.dirty_keys.insert(key.clone());
         self.inner.insert(key, value)
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
-        let res = self.inner.remove(key);
-        if res.is_some() {
-            self.dirty = true;
-        }
-        res
+        self.dirty_keys.insert(key.clone());
+        self.inner.remove(key)
     }
 
-    /// Returns true if changed since last check, and resets the flag
-    pub fn take_dirty(&mut self) -> bool {
-        std::mem::take(&mut self.dirty)
+    pub fn dirty(&self) -> Box<dyn Iterator<Item = &K> + '_> {
+        if self.first_dirty_check {
+            Box::new(self.inner.keys())
+        } else {
+            Box::new(self.dirty_keys.iter())
+        }
     }
 
     /// Peek without resetting
     pub fn is_dirty(&self) -> bool {
-        self.dirty
+        !self.dirty_keys.is_empty() || self.first_dirty_check
     }
 
     // Delegate read-only methods directly
@@ -52,7 +51,7 @@ impl<K: Eq + Hash, V> TrackedHashMap<K, V> {
     }
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        self.dirty = true;
+        self.dirty_keys.insert(key.clone());
         self.inner.get_mut(key)
     }
 
@@ -71,9 +70,8 @@ impl<K: Eq + Hash, V> TrackedHashMap<K, V> {
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, K, V> {
         self.inner.iter()
     }
-
     pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, K, V> {
-        self.dirty = true;
+        self.dirty_all();
         self.inner.iter_mut()
     }
 
@@ -86,21 +84,27 @@ impl<K: Eq + Hash, V> TrackedHashMap<K, V> {
     }
 
     pub fn values_mut(&mut self) -> std::collections::hash_map::ValuesMut<'_, K, V> {
-        self.dirty = true;
+        self.dirty_all();
         self.inner.values_mut()
     }
 
-    pub fn clear(&mut self) {
-        if !self.inner.is_empty() {
-            self.dirty = true;
-            self.inner.clear();
-        }
+    pub fn end_frame(&mut self) {
+        self.dirty_keys.clear();
+        self.first_dirty_check = false;
+    }
+
+    fn dirty_all(&mut self) {
+        self.dirty_keys.extend(self.inner.keys().cloned());
     }
 }
 
-impl<K: Eq + Hash, V> Default for TrackedHashMap<K, V> {
+impl<K: Eq + Hash + Clone, V> Default for TrackedHashMap<K, V> {
     fn default() -> Self {
-        Self::new()
+        Self {
+            inner: HashMap::new(),
+            dirty_keys: HashSet::new(),
+            first_dirty_check: true,
+        }
     }
 }
 

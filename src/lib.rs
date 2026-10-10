@@ -91,7 +91,7 @@ pub fn get_delta_time(sdl: &Sdl, last_frame_time: u32) -> f32 {
 }
 
 pub fn render_world(game: &mut GameState, renderer: &Renderer, viewport: &Viewport) {
-    for mesh in &game.world.chunk_meshes {
+    for mesh in game.world.chunk_meshes.values() {
         renderer.render_mesh_3d(mesh, &game.player.camera, viewport);
     }
 }
