@@ -52,13 +52,7 @@ fn main() -> Result<()> {
             break 'main_loop;
         }
 
-        game.update_selected_block(&input_state);
-        game.handle_mouse(&input_state);
-        game.update_player(dt, &input_state);
-
-        if game.world.voxels.take_dirty() {
-            game.world.rebuild_mesh(&resources);
-        }
+        game.on_frame(&resources, dt, &input_state);
 
         input_state.end_frame();
 

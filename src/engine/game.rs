@@ -19,6 +19,82 @@ pub struct GameState {
     pub player: Player,
 }
 
+impl Default for GameState {
+    fn default() -> Self {
+        Self {
+            state: State::default(),
+            world: World::from_noise(),
+            player: Player::new(Vec3::new(-3.0, 2.0, -3.0)),
+        }
+    }
+}
+
+impl GameState {
+    pub fn on_frame(&mut self, resources: &GameResources, delta_time: Seconds, input_state: &InputState) {
+        self.update_selected_block(input_state);
+        self.handle_mouse(input_state);
+        self.update_player(delta_time, input_state);
+        if self.world.voxels.take_dirty() {
+            self.world.rebuild_mesh(resources);
+        }
+
+    }
+
+    pub fn handle_mouse(&mut self, input_state: &InputState) {
+        let hit_info = get_looking_at_vox_pos(&self.world, &self.player);
+        if let Some(hit_info) = hit_info {
+            self.handle_mouse_presses(&hit_info, input_state);
+        }
+    }
+
+    pub fn update_selected_block(&mut self, input_state: &InputState) {
+        if input_state.just_pressed(Key::Block1) {
+            self.state.selected_block_type.set(BlockType::Dirt);
+        } else if input_state.just_pressed(Key::Block2) {
+            self.state.selected_block_type.set(BlockType::Stone);
+        }
+    }
+
+    pub fn update_fps(&mut self, fps: u32) {
+        if fps.abs_diff(*self.state.fps) > 3 {
+            *self.state.fps = fps;
+        }
+    }
+
+    pub fn update_player(&mut self, delta_time: Seconds, input_state: &InputState) {
+        self.player.process_mouse(input_state.mouse_delta());
+        self.player.step(&self.world, delta_time, input_state);
+    }
+
+    pub fn handle_mouse_presses(&mut self, hit_info: &HitInfo, input_state: &InputState) {
+        if input_state.just_pressed(Key::PlaceBlock) {
+            self.try_place_block(hit_info);
+        }
+
+        if input_state.just_pressed(Key::DestroyBlock) {
+            self.try_remove_block(hit_info);
+        }
+    }
+
+    fn try_remove_block(&mut self, hit_info: &HitInfo) {
+        let to_remove = hit_info.pos;
+        self.world.voxels.remove(&to_remove);
+    }
+
+    fn try_place_block(&mut self, hit_info: &HitInfo) -> bool {
+        let to_place = hit_info.pos + hit_info.normal;
+        if self.world.voxels.contains_key(&to_place)
+            || colliding_with_voxel_from_pos(&self.player.body, to_place.as_vec3())
+        {
+            return false;
+        }
+
+        self.world
+            .set_voxel(to_place, *self.state.selected_block_type);
+        true
+    }
+}
+
 pub struct GameResources {
     pub atlas: TextureAtlas,
 }
@@ -98,71 +174,6 @@ impl GameResources {
     }
 }
 
-impl Default for GameState {
-    fn default() -> Self {
-        Self {
-            state: State::default(),
-            world: World::from_noise(),
-            player: Player::new(Vec3::new(-3.0, 2.0, -3.0)),
-        }
-    }
-}
-
-impl GameState {
-    pub fn handle_mouse(&mut self, input_state: &InputState) {
-        let hit_info = get_looking_at_vox_pos(&self.world, &self.player);
-        if let Some(hit_info) = hit_info {
-            self.handle_mouse_presses(&hit_info, input_state);
-        }
-    }
-
-    pub fn update_selected_block(&mut self, input_state: &InputState) {
-        if input_state.just_pressed(Key::Block1) {
-            self.state.selected_block_type.set(BlockType::Dirt);
-        } else if input_state.just_pressed(Key::Block2) {
-            self.state.selected_block_type.set(BlockType::Stone);
-        }
-    }
-
-    pub fn update_fps(&mut self, fps: u32) {
-        if fps.abs_diff(*self.state.fps) > 3 {
-            *self.state.fps = fps;
-        }
-    }
-
-    pub fn update_player(&mut self, delta_time: Seconds, input_state: &InputState) {
-        self.player.process_mouse(input_state.mouse_delta());
-        self.player.step(&self.world, delta_time, input_state);
-    }
-
-    pub fn handle_mouse_presses(&mut self, hit_info: &HitInfo, input_state: &InputState) {
-        if input_state.just_pressed(Key::PlaceBlock) {
-            self.try_place_block(hit_info);
-        }
-
-        if input_state.just_pressed(Key::DestroyBlock) {
-            self.try_remove_block(hit_info);
-        }
-    }
-
-    fn try_remove_block(&mut self, hit_info: &HitInfo) {
-        let to_remove = hit_info.pos;
-        self.world.voxels.remove(&to_remove);
-    }
-
-    fn try_place_block(&mut self, hit_info: &HitInfo) -> bool {
-        let to_place = hit_info.pos + hit_info.normal;
-        if self.world.voxels.contains_key(&to_place)
-            || colliding_with_voxel_from_pos(&self.player.body, to_place.as_vec3())
-        {
-            return false;
-        }
-
-        self.world
-            .set_voxel(to_place, *self.state.selected_block_type);
-        true
-    }
-}
 
 pub fn vertices_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
     let half = Vec2::splat(size / 2.0);
