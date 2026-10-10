@@ -42,7 +42,7 @@ fn main() -> Result<()> {
 
     'main_loop: loop {
         let dt = fps_tracker.tick(sdl.get_ticks()) as f32 / 1000.0;
-        game.update_fps(dbg!(fps_tracker.fps()));
+        game.update_fps(fps_tracker.fps());
 
         setup_3d_rendering();
         clear_screen();
@@ -53,6 +53,7 @@ fn main() -> Result<()> {
         }
 
         game.on_frame(&resources, dt, &input_state);
+        game.world.get_chunks();
 
         input_state.end_frame();
 
