@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use glam::{UVec2, Vec2};
 use image::{ImageBuffer, Rgba};
-use log::info;
+use tracing::info;
 use serde::Deserialize;
 
 use std::{
@@ -15,11 +15,12 @@ use crate::render::texture::Texture;
 const TEXTURES_DIR: &str = "assets/textures/";
 const BYTES_PER_PX: usize = 4;
 pub const TEXTURE_SIZE_PX: usize = 32;
-const TEXTURE_SIZE_PX_WITH_PADDING: usize = TEXTURE_SIZE_PX + 2;
+
+pub type TextureMap = BTreeMap<String, TextureAtlasEntry>;
 
 pub struct TextureAtlas {
     pub size: Vec2,
-    pub textures: BTreeMap<String, TextureAtlasEntry>,
+    pub textures: TextureMap,
     pub texture: Texture,
 }
 
@@ -202,7 +203,7 @@ fn get_textures() -> Result<BTreeMap<String, TextureAtlasKeyEntry>> {
     let texture_dirs = get_texture_dirs()?;
     let mut textures: BTreeMap<String, TextureAtlasKeyEntry> = BTreeMap::new();
     for dir in &texture_dirs {
-        info!("Found texture dir: {:?}", dir);
+        info!(?dir, "found texture dir");
         let key_path = dir.join("key.json");
         let contents = std::fs::read_to_string(&key_path)
             .with_context(|| format!("Failed to read texture atlas key at {:?}", key_path))?;

@@ -1,31 +1,21 @@
 use glam::Vec3;
+use tracing::debug;
 
 use crate::{
     engine::world::World,
-    input::InputState,
+    input::{InputState, Key, MouseDelta},
     physics::{
         PHYSICS_DT, PhysicsBody,
         movement::{Movement, MovementBackend},
     },
     render::camera::Camera,
+    utils::types::Seconds,
 };
 
 pub(crate) const DEFAULT_MOUSE_SENS: f32 = 0.1;
 pub(crate) const DEFAULT_PLAYER_SPEED: f32 = 6.0;
 pub(crate) const DEFAULT_PLAYER_JUMP_HEIGHT: f32 = 1.25;
 pub(crate) const DEFAULT_PLAYER_REACH: f32 = 5.0;
-
-#[derive(Debug)]
-pub struct PlayerState {
-    body: PhysicsBody,
-}
-
-impl PlayerState {
-    /// Creates a new player state snapshot from a physics body.
-    pub fn new(body: PhysicsBody) -> Self {
-        Self { body }
-    }
-}
 
 pub struct Player {
     pub body: PhysicsBody,
@@ -50,26 +40,29 @@ impl Player {
         }
     }
 
-    /// Updates the player for one frame, handling input, physics, and camera interpolation.
+    fn toggle_movement_mode(&mut self) {
+        self.movement = match &self.movement {
+            Movement::Walk(_) => Movement::fly(),
+            Movement::Fly(_) => Movement::walk(),
+        };
+        debug!(?self.movement, "swapped movement mode");
+        self.body.velocity = Vec3::ZERO;
+    }
+
+    /// Updates the player for one frame, handling input, physics
     pub fn step(
         &mut self,
         world: &World,
-        frame_delta: f32,
-        input_state: &mut InputState,
+        frame_delta: Seconds,
+        input_state: &InputState,
     ) -> PhysicsBody {
-        if input_state.movement_toggle.just_pressed {
-            self.movement = match &self.movement {
-                Movement::Walk(_) => Movement::fly(),
-                Movement::Fly(_) => Movement::walk(),
-            }
+        if input_state.just_pressed(Key::ToggleMovement) {
+            self.toggle_movement_mode();
         }
 
-        let movement = match &self.movement {
-            Movement::Walk(walk) => walk as &dyn MovementBackend,
-            Movement::Fly(fly) => fly as &dyn MovementBackend,
-        };
-
-        let input_vel = movement.velocity_from_input(input_state, &self.camera, self.move_speed);
+        let movement: &dyn MovementBackend = self.movement.as_ref();
+        let input_vel =
+            movement.velocity_from_input(input_state.as_vel(), &self.camera, self.move_speed);
         self.body.velocity = match &self.movement {
             Movement::Walk(_) => input_vel.with_y(self.body.velocity.y),
             Movement::Fly(_) => input_vel,
@@ -77,7 +70,7 @@ impl Player {
 
         self.body.accumulator += frame_delta;
         while self.body.accumulator > PHYSICS_DT {
-            movement.tick(&mut self.body, world, input_state, PHYSICS_DT);
+            movement.tick(&mut self.body, world, input_state.get(Key::Up), PHYSICS_DT);
             self.body.accumulator -= PHYSICS_DT;
         }
 
@@ -87,12 +80,13 @@ impl Player {
     }
 
     /// Processes mouse movement to rotate the camera.
-    pub fn process_mouse(&mut self, x_offset: f32, y_offset: f32) {
-        let x_offset = x_offset * self.mouse_sensitivity * 0.01;
-        let y_offset = y_offset * self.mouse_sensitivity * 0.01;
+    pub fn process_mouse(&mut self, delta: MouseDelta) {
+        let MouseDelta { x, y } = delta;
+        let yaw_delta = x as f32 * self.mouse_sensitivity * 0.01;
+        let pitch_delta = -y as f32 * self.mouse_sensitivity * 0.01;
 
-        self.camera.yaw += x_offset;
-        self.camera.pitch += y_offset;
+        self.camera.yaw += yaw_delta;
+        self.camera.pitch += pitch_delta;
 
         // Constrain pitch to prevent gimbal lock
         const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01; // ~89 degrees

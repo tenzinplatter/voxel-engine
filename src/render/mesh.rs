@@ -11,6 +11,7 @@ use crate::render::{
 
 pub struct Mesh {
     vao: VertexArray,
+    #[allow(dead_code)]
     vbo: Buffer,
     nverticies: u32,
     pub transform: Mat4,
@@ -19,7 +20,7 @@ pub struct Mesh {
 
 impl Mesh {
     /// Creates a new mesh from vertices, transform, and texture.
-    pub fn new<T, V>(verticies: &[T], transform: Mat4, texture: Texture) -> Self
+    pub fn new<T, V>(vertices: &[T], transform: Mat4, texture: Texture) -> Self
     where
         T: Vertex<V> + Pod,
         V: glam_traits::FloatVec + std::ops::AddAssign,
@@ -28,14 +29,14 @@ impl Mesh {
         vao.bind();
         let vbo = Buffer::new().expect("Failed to create VBO");
         vbo.bind(BufferType::Array);
-        buffer_data(BufferType::Array, cast_slice(verticies), GL_STATIC_DRAW);
+        buffer_data(BufferType::Array, cast_slice(vertices), GL_STATIC_DRAW);
         texture.bind();
         T::configure_attributes();
 
         Self {
             vao,
             vbo,
-            nverticies: verticies.len() as u32,
+            nverticies: vertices.len() as u32,
             transform,
             texture,
         }

@@ -1,44 +1,48 @@
-use std::cell::{Cell, Ref, RefCell};
+use std::ops::{Deref, DerefMut};
 
-#[derive(Default)]
 pub struct Tracked<T> {
-    value: RefCell<T>,
-    dirty: Cell<bool>,
+    value: T,
+    dirty: bool,
+}
+
+impl<T> Default for Tracked<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self {
+            value: T::default(),
+            dirty: true,
+        }
+    }
+}
+
+impl<T> DerefMut for Tracked<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.dirty = true;
+        &mut self.value
+    }
+}
+
+impl<T> Deref for Tracked<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
 }
 
 impl<T> Tracked<T> {
     pub fn new(value: T) -> Self {
-        Self {
-            value: RefCell::new(value),
-            dirty: Cell::new(true),
-        } // start dirty so initial state triggers
+        Self { value, dirty: true }
     }
 
-    pub fn set(&self, value: T) {
-        self.value.replace(value);
-        self.dirty.set(true);
+    pub fn set(&mut self, new: T) {
+        self.dirty = true;
+        self.value = new;
     }
 
-    /// Only marks dirty if value actually changed
-    pub fn set_if_changed(&self, value: T)
-    where
-        T: PartialEq,
-    {
-        if *self.value.borrow() != value {
-            self.value.replace(value);
-            self.dirty.set(true);
-        }
-    }
-
-    pub fn get(&'_ self) -> Ref<'_, T> {
-        self.value.borrow()
-    }
-
-    pub fn take_dirty(&'_ self) -> Option<Ref<'_, T>> {
-        if self.dirty.replace(false) {
-            Some(self.value.borrow())
-        } else {
-            None
-        }
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
     }
 }

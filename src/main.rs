@@ -1,17 +1,13 @@
-use beryllium::*;
-
 use anyhow::Result;
-use gl33::{global_loader::*, *};
+use tracing_subscriber::EnvFilter;
 use voxel_engine::{
     draw_axis,
-    engine::game::{GameResources, GameState},
-    get_delta_time,
-    render::{
-        PolygonMode, clear_color, polygon_mode,
-        renderer::{Renderer, Viewport},
-        setup_3d_rendering,
-        ui::UIRenderer,
+    engine::{
+        FpsTracker,
+        game::{GameResources, GameState},
     },
+    input::{InputState},
+    render::{clear_screen, renderer::Renderer, setup_3d_rendering, ui::UIRenderer},
     render_world,
 };
 
@@ -22,26 +18,14 @@ const VERT_SHADER_2D: &str = include_str!("../shaders/2d/vertex.glsl");
 const FRAG_SHADER_2D: &str = include_str!("../shaders/2d/fragment.glsl");
 
 fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
 
-    let (sdl, win) = voxel_engine::init_sdl_and_win();
-
-    unsafe { load_global_gl(&|p_name| win.get_proc_address(p_name)) };
-
-    sdl.set_relative_mouse_mode(true).unwrap();
-    win.set_swap_interval(video::GlSwapInterval::Vsync).unwrap();
-
-    // Get actual drawable size (may differ from window size)
-    let (drawable_width, drawable_height) = win.get_drawable_size();
-    let viewport = Viewport {
-        width: drawable_width,
-        height: drawable_height,
-    };
-
-    // Set viewport to match actual drawable size
-    unsafe {
-        glViewport(0, 0, drawable_width, drawable_height);
-    }
+    let (sdl, win) = voxel_engine::setup_sdl_and_window();
+    let viewport = voxel_engine::drawable_viewport(&win);
 
     let mut game = GameState::default();
     let resources = GameResources::build()?;
@@ -49,43 +33,32 @@ fn main() -> Result<()> {
         (VERT_SHADER_3D, FRAG_SHADER_3D),
         (VERT_SHADER_2D, FRAG_SHADER_2D),
     );
+    let mut input_state = InputState::default();
+    input_state.register_defaults();
+
     let mut ui_renderer = UIRenderer::new(&game, &resources, &viewport);
-
-    clear_color(0.2, 0.3, 0.3, 1.0);
-    polygon_mode(PolygonMode::Fill);
-
-    // Delta time tracking
-    let mut last_frame_time = sdl.get_ticks();
+    let mut fps_tracker = FpsTracker::with_tracking_period(3000);
+    fps_tracker.tick(sdl.get_ticks());
 
     'main_loop: loop {
-        // Calculate delta time
-        let delta_time = get_delta_time(&sdl, last_frame_time);
-        last_frame_time = sdl.get_ticks();
-        let fps = (1.0 / delta_time) as u32;
-        game.state.fps.set_if_changed(fps);
+        let dt = fps_tracker.tick(sdl.get_ticks()) as f32 / 1000.0;
+        game.update_fps(dbg!(fps_tracker.fps()));
 
         setup_3d_rendering();
+        clear_screen();
 
-        unsafe {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        }
-
-        if game.process_input_events(&sdl) {
+        input_state.poll(&sdl);
+        if input_state.should_quit() {
             break 'main_loop;
         }
 
-        game.update_player_and_world(delta_time);
+        game.on_frame(&resources, dt, &input_state);
 
-        if game.world.voxels.take_dirty() {
-            game.world.rebuild_mesh(&resources);
-        }
+        input_state.end_frame();
 
         render_world(&mut game, &renderer, &viewport);
-
         draw_axis(&game.player.camera, &viewport);
-
         ui_renderer.render(&game, &resources, &renderer, &viewport);
-
         win.swap_window();
     }
 

@@ -1,13 +1,16 @@
 use beryllium::{video::GlWindow, *};
-use glam::{Vec2, Vec3};
+use gl33::global_loader::{glViewport, load_global_gl};
+use glam::Vec3;
 
 use crate::{
-    engine::game::{GameResources, GameState, vertices_from_center_and_size},
+    engine::game::GameState,
     render::{
+        PolygonMode,
         camera::Camera,
+        clear_color,
         debug_line::draw_debug_line,
+        polygon_mode,
         renderer::{Renderer, Viewport},
-        vertex::Vertex2D,
     },
 };
 
@@ -25,7 +28,7 @@ const HEIGHT: i32 = 900;
 const WINDOW_TITLE: &str = "(float)";
 
 /// Initializes SDL and creates an OpenGL window with default settings.
-pub fn init_sdl_and_win() -> (Sdl, GlWindow) {
+pub fn setup_sdl_and_window() -> (Sdl, GlWindow) {
     let sdl = Sdl::init(init::InitFlags::EVERYTHING);
 
     sdl.set_gl_context_major_version(3).unwrap();
@@ -47,7 +50,26 @@ pub fn init_sdl_and_win() -> (Sdl, GlWindow) {
     win.set_swap_interval(video::GlSwapInterval::Immediate)
         .unwrap();
 
+    unsafe { load_global_gl(&|p_name| win.get_proc_address(p_name)) };
+
+    sdl.set_relative_mouse_mode(true).unwrap();
+    win.set_swap_interval(video::GlSwapInterval::Vsync).unwrap();
+
+    clear_color(0.2, 0.3, 0.3, 1.0);
+    polygon_mode(PolygonMode::Fill);
+
     (sdl, win)
+}
+
+pub fn drawable_viewport(win: &GlWindow) -> Viewport {
+    let (drawable_width, drawable_height) = win.get_drawable_size();
+    unsafe {
+        glViewport(0, 0, drawable_width, drawable_height);
+    }
+    Viewport {
+        width: drawable_width,
+        height: drawable_height,
+    }
 }
 
 /// Converts degrees to radians.
@@ -110,50 +132,4 @@ pub fn draw_axis(camera: &Camera, viewport: &Viewport) {
         camera,
         viewport,
     );
-}
-
-fn get_crosshair_vertices(resources: &GameResources, viewport: &Viewport) -> [Vertex2D; 6] {
-    let crosshair_size = 16.0;
-    let center = Vec2::new(viewport.width as f32 / 2.0, viewport.height as f32 / 2.0);
-
-    let uvs = resources
-        .atlas
-        .textures
-        .get("crosshair")
-        .expect("Crosshair texture missing from atlas")
-        .to_uvs();
-
-    vertices_from_center_and_size(center, crosshair_size, uvs)
-}
-
-fn get_fps_vertices(resources: &GameResources, viewport: &Viewport, fps: u32) -> Vec<Vertex2D> {
-    // try from to skip the '.'
-    let s = format!("{fps}");
-    let digits = s.chars().filter_map(|c| c.to_digit(10));
-    let center = Vec2::new(viewport.width as f32 - 50.0, 50.0);
-    digits
-        .enumerate()
-        .flat_map(|(i, d)| {
-            let center = center.with_x(center.x + (i * 12) as f32);
-            get_digit_vertices(resources, d, center)
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_digit_vertices(resources: &GameResources, digit: u32, center: Vec2) -> [Vertex2D; 6] {
-    assert!(
-        matches!(digit, 0..=9),
-        "Should not pass a value not in 0..=9 to get_digit_vertices: {digit}"
-    );
-
-    let digit_size = 16.0;
-
-    let uvs = resources
-        .atlas
-        .textures
-        .get(&format!("digit_{digit}"))
-        .expect("Crosshair texture missing from atlas")
-        .to_uvs();
-
-    vertices_from_center_and_size(center, digit_size, uvs)
 }
