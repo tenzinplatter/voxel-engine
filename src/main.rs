@@ -55,8 +55,8 @@ fn main() -> Result<()> {
 
         game.on_frame(&resources, dt, &input_state);
         game.world.rebuild_dirty_chunks(&resources);
-        game.world.voxels.end_frame();
 
+        game.world.voxels.end_frame();
         input_state.end_frame();
 
         render_world(&mut game, &renderer, &viewport);

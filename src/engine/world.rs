@@ -28,27 +28,36 @@ impl<'a> DirtyVoxel<'a> {
     }
 }
 
-pub struct World {
-    pub voxels: TrackedHashMap<IVec3, Voxel>,
-    pub chunk_meshes: HashMap<ChunkBorder, Mesh>,
-}
-
 pub struct ChunkData<'a> {
     border: ChunkBorder,
     voxels: Vec<&'a Voxel>,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ChunkBorder {
-    bottom_left: IVec2,
     top_right: IVec2,
+    bottom_left: IVec2,
+}
+
+impl ChunkBorder {
+    fn expand(&mut self, other: Self) {
+        self.top_right.x = i32::max(self.top_right.x, other.top_right.x);
+        self.top_right.y = i32::max(self.top_right.y, other.top_right.y);
+
+        self.bottom_left.x = i32::min(self.bottom_left.x, other.bottom_left.x);
+        self.bottom_left.y = i32::min(self.bottom_left.y, other.bottom_left.y);
+    }
+}
+
+pub struct World {
+    pub voxels: TrackedHashMap<IVec3, Voxel>,
+    pub chunk_meshes: HashMap<ChunkBorder, Mesh>,
 }
 
 impl World {
     /// Rebuilds the world's mesh from all voxels, optionally using a new texture.
     pub fn rebuild_dirty_chunks(&mut self, resources: &GameResources) {
         let chunk_mesh = |chunk: &ChunkData| -> Mesh {
-            println!("rebuilding chunk");
             let vertices: Vec<_> = chunk
                 .voxels
                 .iter()
@@ -81,7 +90,9 @@ impl World {
         for vox in self.dirty_voxels() {
             let pos = vox.xz();
             let chunk = chunk_pos_to_world_coords(world_to_chunk_pos(pos));
-            let bucket = chunks.get_mut(&chunk).expect("all chunks should have map entries here");
+            let bucket = chunks
+                .get_mut(&chunk)
+                .expect("all chunks should have map entries here");
             bucket.push(vox);
         }
 
@@ -134,32 +145,13 @@ impl World {
             return None;
         }
 
-        // can't generate a border the same way with only one voxel, so we just find its chunk and
-        // return that as the border
-        // TODO: this could probably be refactored so this goes through the standard path, something
-        // like per vox find its chunk, then grow the world border by that
-        if dirty.len() == 1 {
-            let vox = dirty.first().expect("just checked len");
-            let chunk_idx = world_to_chunk_pos(vox.xz());
-            return Some(chunk_pos_to_world_coords(chunk_idx));
-        }
-
-        let mut top_right = IVec2::MIN;
-        let mut bottom_left = IVec2::MAX;
-
+        let mut dirty_border = ChunkBorder::default();
         for voxel in dirty {
-            let IVec2 { x, y } = voxel.xz();
-            top_right.x = i32::max(top_right.x, x);
-            top_right.y = i32::max(top_right.y, y);
-
-            bottom_left.x = i32::min(bottom_left.x, x);
-            bottom_left.y = i32::min(bottom_left.y, y);
+            let chunk_idx = world_to_chunk_pos(voxel.xz());
+            dirty_border.expand(chunk_pos_to_world_coords(chunk_idx));
         }
 
-        Some(ChunkBorder {
-            top_right,
-            bottom_left,
-        })
+        Some(dirty_border)
     }
 
     fn dirty_voxels(&self) -> Vec<DirtyVoxel<'_>> {
