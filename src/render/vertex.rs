@@ -2,47 +2,26 @@ use bytemuck::{Pod, Zeroable};
 use gl33::{global_loader::*, *};
 use glam::{Vec2, Vec3};
 
-pub trait Vertex<T>
-where
-    T: glam_traits::FloatVec + std::ops::AddAssign,
-{
+pub(crate) trait Vertex {
     /// Configures OpenGL vertex attributes for this vertex type.
     fn configure_attributes();
-
-    /// Returns a reference to the vertex position.
-    fn position(&self) -> &T;
-
-    /// Returns a mutable reference to the vertex position.
-    fn position_mut(&mut self) -> &mut T;
-
-    /// Translates the vertex by the given offset.
-    fn translate(&mut self, offset: T) {
-        *self.position_mut() += offset;
-    }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
-pub struct VertexColor {
-    pub position: Vec3,
-    pub color: Vec3,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
-pub struct VertexTex {
-    pub position: Vec3,
-    pub tex: Vec2,
+pub(crate) struct VertexTex {
+    position: Vec3,
+    tex: Vec2,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
-pub struct Vertex2D {
-    pub position: Vec2,
-    pub tex: Vec2,
+pub(crate) struct Vertex2D {
+    pub(crate) position: Vec2,
+    pub(crate) tex: Vec2,
 }
 
-impl Vertex<Vec3> for VertexTex {
+impl Vertex for VertexTex {
     fn configure_attributes() {
         unsafe {
             let vec3_size: i32 = size_of::<Vec3>().try_into().unwrap();
@@ -65,86 +44,45 @@ impl Vertex<Vec3> for VertexTex {
             glEnableVertexAttribArray(1);
         }
     }
-
-    fn position(&self) -> &Vec3 {
-        &self.position
-    }
-
-    fn position_mut(&mut self) -> &mut Vec3 {
-        &mut self.position
-    }
 }
 
 impl VertexTex {
     /// Creates a new textured vertex at the given position with texture coordinates.
-    pub fn new(point: Vec3, tex: Vec2) -> Self {
-        Self { position: point, tex }
-    }
-
-    /// Sets the texture coordinates for this vertex.
-    pub fn set_tex(&mut self, tex: Vec2) {
-        self.tex = tex;
-    }
-}
-
-impl Vertex<Vec3> for VertexColor {
-    fn position(&self) -> &Vec3 {
-        &self.position
-    }
-
-    fn position_mut(&mut self) -> &mut Vec3 {
-        &mut self.position
-    }
-
-    fn configure_attributes() {
-        unsafe {
-            let vec3_size: i32 = size_of::<Vec3>() as i32;
-
-            // setup position attribute
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE.0 as u8, 2 * vec3_size, std::ptr::null());
-
-            // setup color attribute
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE.0 as u8, 2 * vec3_size, vec3_size as *const _);
-
-            glEnableVertexAttribArray(0);
-            glEnableVertexAttribArray(1);
+    pub(crate) fn new(point: Vec3, tex: Vec2) -> Self {
+        Self {
+            position: point,
+            tex,
         }
     }
 }
 
-impl VertexColor {
-    /// Creates a new colored vertex at the given position with color.
-    pub fn new(point: Vec3, color: Vec3) -> Self {
-        Self { position: point, color }
-    }
-
-    /// Sets the color for this vertex.
-    pub fn set_color(&mut self, color: Vec3) {
-        self.color = color;
-    }
-}
-
-impl Vertex<Vec2> for Vertex2D {
+impl Vertex for Vertex2D {
     fn configure_attributes() {
         unsafe {
             let vec2_size: i32 = size_of::<Vec2>() as i32;
 
             // setup position attribute
-            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE.0 as u8, 2 * vec2_size, std::ptr::null());
+            glVertexAttribPointer(
+                0,
+                2,
+                GL_FLOAT,
+                GL_FALSE.0 as u8,
+                2 * vec2_size,
+                std::ptr::null(),
+            );
 
             // setup texture attribute
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE.0 as u8, 2 * vec2_size, vec2_size as *const _);
+            glVertexAttribPointer(
+                1,
+                2,
+                GL_FLOAT,
+                GL_FALSE.0 as u8,
+                2 * vec2_size,
+                vec2_size as *const _,
+            );
 
             glEnableVertexAttribArray(0);
             glEnableVertexAttribArray(1);
         }
-    }
-
-    fn position(&self) -> &Vec2 {
-        &self.position
-    }
-
-    fn position_mut(&mut self) -> &mut Vec2 {
-        &mut self.position
     }
 }

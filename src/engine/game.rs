@@ -13,10 +13,10 @@ use crate::{
     utils::{tracked::Tracked, types::Seconds},
 };
 
-pub struct GameState {
-    pub state: State,
-    pub world: World,
-    pub player: Player,
+pub(crate) struct GameState {
+    pub(crate) state: State,
+    pub(crate) world: World,
+    pub(crate) player: Player,
 }
 
 impl Default for GameState {
@@ -30,22 +30,26 @@ impl Default for GameState {
 }
 
 impl GameState {
-    pub fn on_frame(&mut self, resources: &GameResources, delta_time: Seconds, input_state: &InputState) {
+    pub(crate) fn on_frame(
+        &mut self,
+        resources: &GameResources,
+        delta_time: Seconds,
+        input_state: &InputState,
+    ) {
         self.update_selected_block(input_state);
         self.handle_mouse(input_state);
         self.update_player(delta_time, input_state);
         self.world.rebuild_dirty_chunks(resources);
-
     }
 
-    pub fn handle_mouse(&mut self, input_state: &InputState) {
+    fn handle_mouse(&mut self, input_state: &InputState) {
         let hit_info = get_looking_at_vox_pos(&self.world, &self.player);
         if let Some(hit_info) = hit_info {
             self.handle_mouse_presses(&hit_info, input_state);
         }
     }
 
-    pub fn update_selected_block(&mut self, input_state: &InputState) {
+    fn update_selected_block(&mut self, input_state: &InputState) {
         if input_state.just_pressed(Key::Block1) {
             self.state.selected_block_type.set(BlockType::Dirt);
         } else if input_state.just_pressed(Key::Block2) {
@@ -53,18 +57,18 @@ impl GameState {
         }
     }
 
-    pub fn update_fps(&mut self, fps: u32) {
+    pub(crate) fn update_fps(&mut self, fps: u32) {
         if fps.abs_diff(*self.state.fps) > 3 {
             *self.state.fps = fps;
         }
     }
 
-    pub fn update_player(&mut self, delta_time: Seconds, input_state: &InputState) {
+    fn update_player(&mut self, delta_time: Seconds, input_state: &InputState) {
         self.player.process_mouse(input_state.mouse_delta());
         self.player.step(&self.world, delta_time, input_state);
     }
 
-    pub fn handle_mouse_presses(&mut self, hit_info: &HitInfo, input_state: &InputState) {
+    fn handle_mouse_presses(&mut self, hit_info: &HitInfo, input_state: &InputState) {
         if input_state.just_pressed(Key::PlaceBlock) {
             self.try_place_block(hit_info);
         }
@@ -93,24 +97,24 @@ impl GameState {
     }
 }
 
-pub struct GameResources {
-    pub atlas: TextureAtlas,
+pub(crate) struct GameResources {
+    pub(crate) atlas: TextureAtlas,
 }
 
 #[derive(Default)]
-pub struct State {
-    pub selected_block_type: Tracked<BlockType>,
-    pub fps: Tracked<u32>,
+pub(crate) struct State {
+    pub(crate) selected_block_type: Tracked<BlockType>,
+    pub(crate) fps: Tracked<u32>,
 }
 
 impl GameResources {
-    pub fn build() -> Result<Self> {
+    pub(crate) fn build() -> Result<Self> {
         Ok(Self {
             atlas: TextureAtlas::try_parse_atlas()?,
         })
     }
 
-    pub fn get_vertices_for_block_face(
+    pub(crate) fn get_vertices_for_block_face(
         &self,
         block_type: BlockType,
         center: Vec2,
@@ -127,7 +131,7 @@ impl GameResources {
         vertices_from_center_and_size(center, size, uvs)
     }
 
-    pub fn get_crosshair_vertices(&self, center: Vec2) -> [Vertex2D; 6] {
+    pub(crate) fn get_crosshair_vertices(&self, center: Vec2) -> [Vertex2D; 6] {
         const CROSSHAIR_SIZE: f32 = 16.0;
         let uvs = self
             .atlas
@@ -139,7 +143,7 @@ impl GameResources {
         vertices_from_center_and_size(center, CROSSHAIR_SIZE, uvs)
     }
 
-    pub fn get_fps_vertices(&self, center: Vec2, fps: u32) -> Vec<Vertex2D> {
+    pub(crate) fn get_fps_vertices(&self, center: Vec2, fps: u32) -> Vec<Vertex2D> {
         let s = format!("{fps}");
         let digits = s.chars().map(|c| {
             c.to_digit(10)
@@ -172,8 +176,7 @@ impl GameResources {
     }
 }
 
-
-pub fn vertices_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
+fn vertices_from_center_and_size(center: Vec2, size: f32, uvs: [Vec2; 4]) -> [Vertex2D; 6] {
     let half = Vec2::splat(size / 2.0);
     let corners = [
         Vec2::new(-1., -1.),

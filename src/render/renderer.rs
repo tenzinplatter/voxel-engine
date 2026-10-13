@@ -9,15 +9,15 @@ use crate::{
     },
 };
 
-pub struct Renderer {
+pub(crate) struct Renderer {
     shader_program_3d: ShaderProgram,
     shader_program_2d: ShaderProgram,
 }
 
 // TEMP: should this live here? should it exist?
-pub struct Viewport {
-    pub width: i32,
-    pub height: i32,
+pub(crate) struct Viewport {
+    pub(crate) width: i32,
+    pub(crate) height: i32,
 }
 
 impl Renderer {
@@ -27,11 +27,11 @@ impl Renderer {
     ///   Order: (vertex_shader, fragment_shader)
     /// * `shaders_2d` - A tuple containing the vertex and fragment shader source code for 2D rendering.
     ///   Order: (vertex_shader, fragment_shader)
-    pub fn new(shaders_3d: (&str, &str), shaders_2d: (&str, &str)) -> Self {
-        let shader_program_3d =
-            ShaderProgram::from_vert_frag(shaders_3d.0, shaders_3d.1).expect("Failed to create shader program");
-        let shader_program_2d =
-            ShaderProgram::from_vert_frag(shaders_2d.0, shaders_2d.1).expect("Failed to create shader program");
+    pub(crate) fn new(shaders_3d: (&str, &str), shaders_2d: (&str, &str)) -> Self {
+        let shader_program_3d = ShaderProgram::from_vert_frag(shaders_3d.0, shaders_3d.1)
+            .expect("Failed to create shader program");
+        let shader_program_2d = ShaderProgram::from_vert_frag(shaders_2d.0, shaders_2d.1)
+            .expect("Failed to create shader program");
 
         Self {
             shader_program_3d,
@@ -40,16 +40,16 @@ impl Renderer {
     }
 
     /// Binds the renderer's shader program for use.
-    pub fn bind_3d(&self) {
+    fn bind_3d(&self) {
         self.shader_program_3d.use_program()
     }
 
-    pub fn bind_2d(&self) {
+    fn bind_2d(&self) {
         self.shader_program_2d.use_program()
     }
 
     /// Renders a mesh with the given camera and viewport settings.
-    pub fn render_mesh_3d(&self, mesh: &Mesh, camera: &Camera, viewport: &Viewport) {
+    pub(crate) fn render_mesh_3d(&self, mesh: &Mesh, camera: &Camera, viewport: &Viewport) {
         self.bind_3d();
         let view = camera.view_matrix();
         let proj = Mat4::perspective_rh_gl(
@@ -61,14 +61,22 @@ impl Renderer {
 
         self.shader_program_3d.set_uniform("view", view);
         self.shader_program_3d.set_uniform("proj", proj);
-        self.shader_program_3d.set_uniform("transform", mesh.transform);
+        self.shader_program_3d
+            .set_uniform("transform", mesh.transform);
 
         mesh.draw(&self.shader_program_3d);
     }
 
-    pub fn render_mesh_2d(&self, mesh: &Mesh, viewport: &Viewport) {
+    pub(crate) fn render_mesh_2d(&self, mesh: &Mesh, viewport: &Viewport) {
         self.bind_2d();
-        let proj = Mat4::orthographic_rh_gl(0.0, viewport.width as f32, viewport.height as f32, 0.0, -1.0, 1.0);
+        let proj = Mat4::orthographic_rh_gl(
+            0.0,
+            viewport.width as f32,
+            viewport.height as f32,
+            0.0,
+            -1.0,
+            1.0,
+        );
         self.shader_program_2d.set_uniform("proj", proj);
 
         mesh.draw(&self.shader_program_2d);

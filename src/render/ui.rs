@@ -9,12 +9,12 @@ use crate::{
     },
 };
 
-pub struct UIRenderer {
+pub(crate) struct UIRenderer {
     mesh: Mesh,
 }
 
 impl UIRenderer {
-    pub fn new(game: &GameState, resources: &GameResources, viewport: &Viewport) -> Self {
+    pub(crate) fn new(game: &GameState, resources: &GameResources, viewport: &Viewport) -> Self {
         Self {
             mesh: Self::build_mesh(game, resources, viewport),
         }
@@ -45,11 +45,7 @@ impl UIRenderer {
         Mesh::new(&vertices, Mat4::IDENTITY, resources.atlas.texture)
     }
 
-    pub fn mesh(&self) -> &Mesh {
-        &self.mesh
-    }
-
-    pub fn rebuild_mesh_if_dirty(
+    fn rebuild_mesh_if_dirty(
         &mut self,
         game: &GameState,
         resources: &GameResources,
@@ -63,7 +59,7 @@ impl UIRenderer {
         }
     }
 
-    pub fn render(
+    pub(crate) fn render(
         &mut self,
         game: &GameState,
         resources: &GameResources,

@@ -7,7 +7,7 @@ use beryllium::{
 use glam::Vec3;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum InputKey {
+enum InputKey {
     MousePress(u8),
     KeyPress(SDL_Keycode),
 }
@@ -25,7 +25,7 @@ impl From<u8> for InputKey {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Key {
+pub(crate) enum Key {
     Forward,
     Back,
     Left,
@@ -40,14 +40,14 @@ pub enum Key {
 }
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct MouseDelta {
-    pub x: i32,
-    pub y: i32,
+pub(crate) struct MouseDelta {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
 }
 
 /// Represents the key events that occurred in a single frame
 #[derive(Debug, Default)]
-pub struct InputState {
+pub(crate) struct InputState {
     input_keys: HashMap<InputKey, Key>,
     key_states: HashMap<Key, KeyState>,
     mouse_delta: MouseDelta,
@@ -55,37 +55,29 @@ pub struct InputState {
 }
 
 impl InputState {
-    pub fn should_quit(&self) -> bool {
+    pub(crate) fn should_quit(&self) -> bool {
         self.received_quit
     }
 
-    pub fn mouse_delta(&self) -> MouseDelta {
+    pub(crate) fn mouse_delta(&self) -> MouseDelta {
         self.mouse_delta
     }
 
-    pub fn register(&mut self, key: Key, keycode: InputKey) {
+    fn register(&mut self, key: Key, keycode: InputKey) {
         self.input_keys.insert(keycode, key);
         self.key_states.insert(key, KeyState::default());
     }
 
-    pub fn get(&self, key: Key) -> KeyState {
+    pub(crate) fn get(&self, key: Key) -> KeyState {
         self.key_states.get(&key).copied().unwrap_or_default()
     }
 
-    pub fn just_pressed(&self, key: Key) -> bool {
+    pub(crate) fn just_pressed(&self, key: Key) -> bool {
         self.get(key).just_pressed
     }
 
-    pub fn is_pressed(&self, key: Key) -> bool {
-        self.get(key).is_pressed
-    }
-
-    pub fn just_released(&self, key: Key) -> bool {
-        self.get(key).just_released
-    }
-
     /// Converts the current input state to a normalized velocity vector.
-    pub fn as_vel(&self) -> Vec3 {
+    pub(crate) fn as_vel(&self) -> Vec3 {
         fn axis(positive: KeyState, negative: KeyState) -> f32 {
             f32::from(positive.is_pressed) - f32::from(negative.is_pressed)
         }
@@ -99,7 +91,7 @@ impl InputState {
         vel.try_normalize().unwrap_or(vel)
     }
 
-    pub fn end_frame(&mut self) {
+    pub(crate) fn end_frame(&mut self) {
         self.key_states.values_mut().for_each(KeyState::end_frame);
         self.mouse_delta = MouseDelta::default();
     }
@@ -113,7 +105,7 @@ impl InputState {
         }
     }
 
-    pub fn register_defaults(&mut self) {
+    pub(crate) fn register_defaults(&mut self) {
         self.register(Key::Forward, SDLK_w.into());
         self.register(Key::Back, SDLK_s.into());
         self.register(Key::Left, SDLK_a.into());
@@ -128,7 +120,7 @@ impl InputState {
     }
 
     /// Poll the provided sdl instance for input events
-    pub fn poll(&mut self, sdl: &Sdl) {
+    pub(crate) fn poll(&mut self, sdl: &Sdl) {
         while let Some(event) = sdl.poll_events() {
             match event {
                 (events::Event::Quit, _) => self.received_quit = true,
@@ -164,14 +156,14 @@ impl InputState {
 }
 
 #[derive(Default, Debug, Clone, Copy)]
-pub struct KeyState {
-    pub is_pressed: bool,
-    pub just_pressed: bool,
-    pub just_released: bool,
+pub(crate) struct KeyState {
+    pub(crate) is_pressed: bool,
+    pub(crate) just_pressed: bool,
+    just_released: bool,
 }
 
 impl KeyState {
-    pub fn end_frame(&mut self) {
+    fn end_frame(&mut self) {
         self.just_pressed = false;
         self.just_released = false;
     }

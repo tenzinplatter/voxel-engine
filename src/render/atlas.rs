@@ -1,8 +1,8 @@
 use anyhow::{Context, Result, bail};
 use glam::{UVec2, Vec2};
 use image::{ImageBuffer, Rgba};
-use tracing::info;
 use serde::Deserialize;
+use tracing::info;
 
 use std::{
     collections::BTreeMap,
@@ -14,21 +14,20 @@ use crate::render::texture::Texture;
 
 const TEXTURES_DIR: &str = "assets/textures/";
 const BYTES_PER_PX: usize = 4;
-pub const TEXTURE_SIZE_PX: usize = 32;
+pub(crate) const TEXTURE_SIZE_PX: usize = 32;
 
-pub type TextureMap = BTreeMap<String, TextureAtlasEntry>;
+type TextureMap = BTreeMap<String, TextureAtlasEntry>;
 
-pub struct TextureAtlas {
-    pub size: Vec2,
-    pub textures: TextureMap,
-    pub texture: Texture,
+pub(crate) struct TextureAtlas {
+    pub(crate) textures: TextureMap,
+    pub(crate) texture: Texture,
 }
 
 /// NOTE: in UV 0 - 1 coords
 #[derive(Debug)]
-pub struct TextureAtlasEntry {
-    pub top_left: Vec2,
-    pub size: Vec2,
+pub(crate) struct TextureAtlasEntry {
+    top_left: Vec2,
+    size: Vec2,
 }
 
 #[derive(Deserialize)]
@@ -39,7 +38,7 @@ struct TextureAtlasKeyEntry {
 impl TextureAtlasEntry {
     /// Returns the four UV coordinates (Vec2) for the corners of the rectangle
     /// Order: top-left, top-right, bottom-right, bottom-left
-    pub fn to_uvs(&self) -> [Vec2; 4] {
+    pub(crate) fn to_uvs(&self) -> [Vec2; 4] {
         let tl = self.top_left;
         let tr = Vec2::new(self.top_left.x + self.size.x, self.top_left.y);
         let br = Vec2::new(self.top_left.x + self.size.x, self.top_left.y + self.size.y);
@@ -50,7 +49,7 @@ impl TextureAtlasEntry {
 
 impl TextureAtlas {
     /// NOTE: assumes all textures are 16x16
-    pub fn try_parse_atlas() -> Result<Self> {
+    pub(crate) fn try_parse_atlas() -> Result<Self> {
         let textures = get_textures()?;
 
         let (atlas_pixels_buf, (atlas_width_px, atlas_height_px)) =
@@ -72,11 +71,7 @@ impl TextureAtlas {
         texture.bind();
         Texture::set_from_pixels(atlas_pixels_buf, atlas_width_px, atlas_height_px);
 
-        Ok(Self {
-            size: Vec2::new(atlas_width_px as f32, atlas_height_px as f32),
-            textures,
-            texture,
-        })
+        Ok(Self { textures, texture })
     }
 }
 

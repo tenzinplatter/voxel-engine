@@ -4,22 +4,13 @@ use crate::utils::types::Milliseconds;
 
 /// Keeps track of the frame rate across some period as an average.
 #[derive(Debug)]
-pub struct FpsTracker {
+pub(crate) struct FpsTracker {
     times: LinkedList<Milliseconds>,
     period: Milliseconds,
 }
 
-impl Default for FpsTracker {
-    fn default() -> Self {
-        Self {
-            times: LinkedList::new(),
-            period: 3,
-        }
-    }
-}
-
 impl FpsTracker {
-    pub fn with_tracking_period(period: Milliseconds) -> Self {
+    pub(crate) fn with_tracking_period(period: Milliseconds) -> Self {
         Self {
             times: LinkedList::new(),
             period,
@@ -27,7 +18,7 @@ impl FpsTracker {
     }
 
     /// Returns the delta between now and the last tick call
-    pub fn tick(&mut self, now: Milliseconds) -> Milliseconds {
+    pub(crate) fn tick(&mut self, now: Milliseconds) -> Milliseconds {
         let last = self.times.back().copied().unwrap_or_default();
         assert!(now >= last, "failed: now: {now} > last: {last}");
         let delta = now - self.times.back().unwrap_or(&now);
@@ -42,7 +33,7 @@ impl FpsTracker {
         delta
     }
 
-    pub fn fps(&self) -> u32 {
+    pub(crate) fn fps(&self) -> u32 {
         let times = self.frame_times();
         let avg = times.iter().map(|t| *t as f32).sum::<f32>() / times.len() as f32;
         (1000.0 / avg) as u32

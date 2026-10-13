@@ -8,13 +8,13 @@ use crate::{
     render::camera::Camera,
 };
 
-pub trait MovementBackend {
+pub(crate) trait MovementBackend {
     fn tick(&self, body: &mut PhysicsBody, world: &World, up: KeyState, dt: f32);
     fn velocity_from_input(&self, input_velocity: Vec3, camera: &Camera, speed: f32) -> Vec3;
 }
 
 #[derive(Debug)]
-pub enum Movement {
+pub(crate) enum Movement {
     Walk(Walk),
     Fly(Fly),
 }
@@ -29,17 +29,17 @@ impl<'a> AsRef<dyn MovementBackend + 'a> for Movement {
 }
 
 impl Movement {
-    pub fn walk() -> Self {
+    pub(crate) fn walk() -> Self {
         Self::Walk(Walk)
     }
 
-    pub fn fly() -> Self {
+    pub(crate) fn fly() -> Self {
         Movement::Fly(Fly)
     }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct Fly;
+pub(crate) struct Fly;
 
 impl MovementBackend for Fly {
     fn velocity_from_input(&self, input_velocity: Vec3, camera: &Camera, speed: f32) -> Vec3 {
@@ -58,7 +58,7 @@ impl MovementBackend for Fly {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct Walk;
+pub(crate) struct Walk;
 
 impl MovementBackend for Walk {
     fn velocity_from_input(&self, input_velocity: Vec3, camera: &Camera, speed: f32) -> Vec3 {

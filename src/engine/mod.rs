@@ -1,7 +1,7 @@
-pub mod world;
-pub mod voxel;
-pub mod block;
-pub mod game;
+pub(crate) mod block;
 mod frames;
+pub(crate) mod game;
+pub(crate) mod voxel;
+pub(crate) mod world;
 
-pub use frames::FpsTracker;
+pub(crate) use frames::FpsTracker;
