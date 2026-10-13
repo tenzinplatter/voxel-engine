@@ -1,16 +1,20 @@
 use glam::{IVec3, Vec2, Vec3};
 
-use crate::{engine::{block::BlockType, game::GameResources}, physics::PhysicsBody, render::vertex::VertexTex};
+use crate::{
+    engine::{block::BlockType, game::GameResources},
+    physics::PhysicsBody,
+    render::vertex::VertexTex,
+};
 
 #[derive(Debug)]
-pub struct Voxel {
-    pub body: PhysicsBody,
-    pub block_type: BlockType,
+pub(crate) struct Voxel {
+    pub(crate) body: PhysicsBody,
+    block_type: BlockType,
 }
 
 impl Voxel {
     /// Creates a new voxel at the given integer position.
-    pub fn new(position: IVec3, block_type: BlockType) -> Self {
+    pub(crate) fn new(position: IVec3, block_type: BlockType) -> Self {
         Voxel {
             body: PhysicsBody::new(position.as_vec3(), Vec3::ONE),
             block_type,
@@ -19,7 +23,7 @@ impl Voxel {
 
     /// Returns the 36 vertices that make up this voxel's cube geometry.
     /// Generates 6 faces (2 triangles each = 6 vertices per face).
-    pub fn get_vertices(&self, resources: &GameResources) -> [VertexTex; 36] {
+    pub(crate) fn get_vertices(&self, resources: &GameResources) -> [VertexTex; 36] {
         let pos = self.body.position;
 
         // Define the 6 cube faces with their 4 corners in counter-clockwise order
@@ -75,7 +79,12 @@ impl Voxel {
             .atlas
             .textures
             .get(self.block_type.as_str())
-            .unwrap_or_else(|| panic!("Block type: {} doesn't exist in atlas", self.block_type.as_str()))
+            .unwrap_or_else(|| {
+                panic!(
+                    "Block type: {} doesn't exist in atlas",
+                    self.block_type.as_str()
+                )
+            })
             .to_uvs();
 
         let mut vertices = [VertexTex::new(Vec3::ZERO, Vec2::ZERO); 36];

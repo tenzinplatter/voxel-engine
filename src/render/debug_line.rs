@@ -1,9 +1,13 @@
-use gl33::{global_loader::*, GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, GL_FALSE, GL_FLOAT, GL_LINES};
+use gl33::{GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, GL_FALSE, GL_FLOAT, GL_LINES, global_loader::*};
 use glam::{Mat4, Vec3};
 use std::mem::size_of;
 use std::sync::LazyLock;
 
-use crate::render::{camera::Camera, renderer::Viewport, shader::{ShaderProgram, ShaderUniformType}};
+use crate::render::{
+    camera::Camera,
+    renderer::Viewport,
+    shader::{ShaderProgram, ShaderUniformType},
+};
 
 static DEBUG_LINE_SHADER: LazyLock<ShaderProgram> = LazyLock::new(|| {
     let vert = include_str!("../../shaders/debug/vertex.glsl");
@@ -11,7 +15,13 @@ static DEBUG_LINE_SHADER: LazyLock<ShaderProgram> = LazyLock::new(|| {
     ShaderProgram::from_vert_frag(vert, frag).expect("Failed to compile debug line shader")
 });
 
-pub fn draw_debug_line(start: Vec3, end: Vec3, color: Vec3, camera: &Camera, viewport: &Viewport) {
+pub(crate) fn draw_debug_line(
+    start: Vec3,
+    end: Vec3,
+    color: Vec3,
+    camera: &Camera,
+    viewport: &Viewport,
+) {
     unsafe {
         let shader = &*DEBUG_LINE_SHADER;
         shader.use_program();
@@ -27,10 +37,22 @@ pub fn draw_debug_line(start: Vec3, end: Vec3, color: Vec3, camera: &Camera, vie
 
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, size_of::<[f32; 6]>() as isize, vertices.as_ptr() as *const _, GL_DYNAMIC_DRAW);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            size_of::<[f32; 6]>() as isize,
+            vertices.as_ptr() as *const _,
+            GL_DYNAMIC_DRAW,
+        );
 
         // Position attribute (location = 0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE.0 as u8, (3 * size_of::<f32>()) as i32, std::ptr::null());
+        glVertexAttribPointer(
+            0,
+            3,
+            GL_FLOAT,
+            GL_FALSE.0 as u8,
+            (3 * size_of::<f32>()) as i32,
+            std::ptr::null(),
+        );
         glEnableVertexAttribArray(0);
 
         // Set uniforms

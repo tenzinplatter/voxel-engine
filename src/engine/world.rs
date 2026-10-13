@@ -14,22 +14,22 @@ const CHUNK_SIZE: i32 = 16;
 const WORLD_SIZE: i32 = 32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ChunkPos(IVec2);
+pub(crate) struct ChunkPos(IVec2);
 
 impl ChunkPos {
-    pub fn containing(voxel: IVec3) -> Self {
+    fn containing(voxel: IVec3) -> Self {
         Self(voxel.xz().div_euclid(IVec2::splat(CHUNK_SIZE)))
     }
 }
 
-pub struct World {
-    pub voxels: TrackedHashMap<IVec3, Voxel>,
-    pub chunk_meshes: HashMap<ChunkPos, Mesh>,
+pub(crate) struct World {
+    pub(crate) voxels: TrackedHashMap<IVec3, Voxel>,
+    pub(crate) chunk_meshes: HashMap<ChunkPos, Mesh>,
 }
 
 impl World {
     /// Rebuilds the mesh of every chunk containing a voxel changed since the last frame.
-    pub fn rebuild_dirty_chunks(&mut self, resources: &GameResources) {
+    pub(crate) fn rebuild_dirty_chunks(&mut self, resources: &GameResources) {
         let rebuilt: Vec<_> = self
             .dirty_chunks()
             .into_iter()
@@ -61,23 +61,18 @@ impl World {
     }
 
     /// Adds a voxel at the given position, returning the old value if one existed.
-    pub fn set_voxel(&mut self, pos: IVec3, block_type: BlockType) -> Option<Voxel> {
+    pub(crate) fn set_voxel(&mut self, pos: IVec3, block_type: BlockType) -> Option<Voxel> {
         self.voxels.insert(pos, Voxel::new(pos, block_type))
     }
 
-    /// Removes the voxel at the given position, returning it if it existed.
-    pub fn remove_voxel(&mut self, pos: &IVec3) -> Option<Voxel> {
-        self.voxels.remove(pos)
-    }
-
     /// Checks if the given physics body is colliding with any voxel in the world.
-    pub fn is_colliding(&self, other: &PhysicsBody) -> bool {
+    pub(crate) fn is_colliding(&self, other: &PhysicsBody) -> bool {
         // TODO: extrusion or something so we cant phase through voxels when moving quickly
         // TODO: optimize to not check every square
         self.voxels.values().any(|v| colliding_with(&v.body, other))
     }
 
-    pub fn from_noise() -> World {
+    pub(crate) fn from_noise() -> World {
         let perlin = Perlin::new(1);
         let scale = 0.05;
 
@@ -139,5 +134,9 @@ fn chunk_mesh(resources: &GameResources, voxels: &[&Voxel]) -> Option<Mesh> {
         .iter()
         .flat_map(|vox| vox.get_vertices(resources))
         .collect();
-    Some(Mesh::new(&vertices, Mat4::IDENTITY, resources.atlas.texture))
+    Some(Mesh::new(
+        &vertices,
+        Mat4::IDENTITY,
+        resources.atlas.texture,
+    ))
 }

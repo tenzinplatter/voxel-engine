@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-pub struct Tracked<T> {
+pub(crate) struct Tracked<T> {
     value: T,
     dirty: bool,
 }
@@ -33,16 +33,12 @@ impl<T> Deref for Tracked<T> {
 }
 
 impl<T> Tracked<T> {
-    pub fn new(value: T) -> Self {
-        Self { value, dirty: true }
-    }
-
-    pub fn set(&mut self, new: T) {
+    pub(crate) fn set(&mut self, new: T) {
         self.dirty = true;
         self.value = new;
     }
 
-    pub fn is_dirty(&self) -> bool {
+    pub(crate) fn is_dirty(&self) -> bool {
         self.dirty
     }
 }

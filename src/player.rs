@@ -12,25 +12,25 @@ use crate::{
     utils::types::Seconds,
 };
 
-pub(crate) const DEFAULT_MOUSE_SENS: f32 = 0.1;
+const DEFAULT_MOUSE_SENS: f32 = 0.1;
 pub(crate) const DEFAULT_PLAYER_SPEED: f32 = 6.0;
 pub(crate) const DEFAULT_PLAYER_JUMP_HEIGHT: f32 = 1.25;
 pub(crate) const DEFAULT_PLAYER_REACH: f32 = 5.0;
 
-pub struct Player {
-    pub body: PhysicsBody,
+pub(crate) struct Player {
+    pub(crate) body: PhysicsBody,
     movement: Movement,
 
     mouse_sensitivity: f32,
     /// multiplier for a normalized velocity vector, player speed
     move_speed: f32,
 
-    pub camera: Camera,
+    pub(crate) camera: Camera,
 }
 
 impl Player {
     /// Creates a new player at the given position with default settings.
-    pub fn new(position: Vec3) -> Self {
+    pub(crate) fn new(position: Vec3) -> Self {
         Self {
             body: PhysicsBody::new(position, Vec3::new(0.8, 1.8, 0.8)),
             camera: Camera::looking_at(position, Vec3::ZERO),
@@ -50,7 +50,7 @@ impl Player {
     }
 
     /// Updates the player for one frame, handling input, physics
-    pub fn step(
+    pub(crate) fn step(
         &mut self,
         world: &World,
         frame_delta: Seconds,
@@ -80,7 +80,7 @@ impl Player {
     }
 
     /// Processes mouse movement to rotate the camera.
-    pub fn process_mouse(&mut self, delta: MouseDelta) {
+    pub(crate) fn process_mouse(&mut self, delta: MouseDelta) {
         let MouseDelta { x, y } = delta;
         let yaw_delta = x as f32 * self.mouse_sensitivity * 0.01;
         let pitch_delta = -y as f32 * self.mouse_sensitivity * 0.01;

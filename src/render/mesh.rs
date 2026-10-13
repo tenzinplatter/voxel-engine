@@ -9,22 +9,17 @@ use crate::render::{
     vertex::Vertex,
 };
 
-pub struct Mesh {
+pub(crate) struct Mesh {
     vao: VertexArray,
     #[allow(dead_code)]
     vbo: Buffer,
     nverticies: u32,
-    pub transform: Mat4,
-    pub texture: Texture,
+    pub(crate) transform: Mat4,
 }
 
 impl Mesh {
     /// Creates a new mesh from vertices, transform, and texture.
-    pub fn new<T, V>(vertices: &[T], transform: Mat4, texture: Texture) -> Self
-    where
-        T: Vertex<V> + Pod,
-        V: glam_traits::FloatVec + std::ops::AddAssign,
-    {
+    pub(crate) fn new<T: Vertex + Pod>(vertices: &[T], transform: Mat4, texture: Texture) -> Self {
         let vao = VertexArray::new().expect("Failed to create VAO");
         vao.bind();
         let vbo = Buffer::new().expect("Failed to create VBO");
@@ -38,12 +33,11 @@ impl Mesh {
             vbo,
             nverticies: vertices.len() as u32,
             transform,
-            texture,
         }
     }
 
     /// Draws the mesh using the given shader program.
-    pub fn draw(&self, shader_program: &ShaderProgram) {
+    pub(crate) fn draw(&self, shader_program: &ShaderProgram) {
         glBindVertexArray(self.vao.0);
         shader_program.set_uniform("model", self.transform);
         unsafe {

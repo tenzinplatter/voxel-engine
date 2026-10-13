@@ -1,2 +1,2 @@
-pub type Seconds = f32;
-pub type Milliseconds = u32;
+pub(crate) type Seconds = f32;
+pub(crate) type Milliseconds = u32;
