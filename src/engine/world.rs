@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 
-use glam::{IVec2, IVec3, Mat4, Vec3Swizzles};
+use glam::{IVec2, IVec3, Mat4, Vec3, Vec3Swizzles};
 use noise::{NoiseFn, Perlin};
 
 use crate::{
-    engine::{block::BlockType, game::GameResources, voxel::Voxel},
+    engine::{
+        block::BlockType,
+        game::GameResources,
+        voxel::{FACE_NORMALS, Voxel},
+    },
     physics::{PhysicsBody, colliding_with},
     render::mesh::Mesh,
     utils::tracked_map::TrackedHashMap,
@@ -33,7 +37,7 @@ impl World {
         let rebuilt: Vec<_> = self
             .dirty_chunks()
             .into_iter()
-            .map(|(chunk, voxels)| (chunk, chunk_mesh(resources, &voxels)))
+            .map(|(chunk, voxels)| (chunk, self.chunk_mesh(resources, &voxels)))
             .collect();
 
         for (chunk, mesh) in rebuilt {
@@ -44,20 +48,57 @@ impl World {
         }
     }
 
-    fn dirty_chunks(&self) -> HashMap<ChunkPos, Vec<&Voxel>> {
-        let mut chunks: HashMap<ChunkPos, Vec<&Voxel>> = self
+    /// Directions of the faces of the voxel at `pos` that are covered by an adjacent voxel.
+    fn hidden_faces(&self, pos: IVec3) -> Vec<IVec3> {
+        FACE_NORMALS
+            .into_iter()
+            .filter(|&normal| self.voxels.contains_key(&(pos + normal)))
+            .collect()
+    }
+
+    /// Groups voxels by chunk for every chunk containing, or bordering, a changed voxel.
+    fn dirty_chunks(&self) -> HashMap<ChunkPos, Vec<(IVec3, &Voxel)>> {
+        // A change can expose or hide faces of voxels in a neighbouring chunk
+        let mut chunks: HashMap<ChunkPos, Vec<(IVec3, &Voxel)>> = self
             .voxels
             .dirty()
-            .map(|&pos| (ChunkPos::containing(pos), Vec::new()))
+            .flat_map(|&pos| {
+                std::iter::once(pos)
+                    .chain(FACE_NORMALS.map(|normal| pos + normal))
+                    .map(|pos| (ChunkPos::containing(pos), Vec::new()))
+            })
             .collect();
 
         for (&pos, voxel) in self.voxels.iter() {
             if let Some(bucket) = chunks.get_mut(&ChunkPos::containing(pos)) {
-                bucket.push(voxel);
+                bucket.push((pos, voxel));
             }
         }
 
         chunks
+    }
+
+    fn chunk_mesh(
+        &self,
+        resources: &GameResources,
+        voxels: &[(IVec3, &Voxel)],
+    ) -> Option<Mesh> {
+        if voxels.is_empty() {
+            return None;
+        }
+
+        let vertices: Vec<_> = voxels
+            .iter()
+            .flat_map(|&(pos, vox)| {
+                vox.get_vertices(resources, &self.hidden_faces(pos))
+            })
+            .collect();
+
+        Some(Mesh::new(
+            &vertices,
+            Mat4::IDENTITY,
+            resources.atlas.texture,
+        ))
     }
 
     /// Adds a voxel at the given position, returning the old value if one existed.
@@ -123,20 +164,4 @@ impl Default for World {
             chunk_meshes: HashMap::new(),
         }
     }
-}
-
-fn chunk_mesh(resources: &GameResources, voxels: &[&Voxel]) -> Option<Mesh> {
-    if voxels.is_empty() {
-        return None;
-    }
-
-    let vertices: Vec<_> = voxels
-        .iter()
-        .flat_map(|vox| vox.get_vertices(resources))
-        .collect();
-    Some(Mesh::new(
-        &vertices,
-        Mat4::IDENTITY,
-        resources.atlas.texture,
-    ))
 }

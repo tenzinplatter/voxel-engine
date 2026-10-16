@@ -1,10 +1,19 @@
-use glam::{IVec3, Vec2, Vec3};
+use glam::{IVec3, Vec3};
 
 use crate::{
     engine::{block::BlockType, game::GameResources},
     physics::PhysicsBody,
     render::vertex::VertexTex,
 };
+
+pub(crate) const FACE_NORMALS: [IVec3; 6] = [
+    IVec3::NEG_Z,
+    IVec3::Z,
+    IVec3::NEG_X,
+    IVec3::X,
+    IVec3::NEG_Y,
+    IVec3::Y,
+];
 
 #[derive(Debug)]
 pub(crate) struct Voxel {
@@ -21,58 +30,14 @@ impl Voxel {
         }
     }
 
-    /// Returns the 36 vertices that make up this voxel's cube geometry.
-    /// Generates 6 faces (2 triangles each = 6 vertices per face).
-    pub(crate) fn get_vertices(&self, resources: &GameResources) -> [VertexTex; 36] {
+    /// Returns the vertices of every face not pointing along one of `hidden_faces`,
+    /// two triangles (6 vertices) per face.
+    pub(crate) fn get_vertices(
+        &self,
+        resources: &GameResources,
+        hidden_faces: &[IVec3],
+    ) -> Vec<VertexTex> {
         let pos = self.body.position;
-
-        // Define the 6 cube faces with their 4 corners in counter-clockwise order
-        // Each face: [bottom_left, bottom_right, top_right, top_left]
-        // Voxel occupies [0, 1] in each dimension (standard grid coordinates)
-        let faces = [
-            // Back face (Z-)
-            [
-                Vec3::new(0.0, 0.0, 0.0),
-                Vec3::new(1.0, 0.0, 0.0),
-                Vec3::new(1.0, 1.0, 0.0),
-                Vec3::new(0.0, 1.0, 0.0),
-            ],
-            // Front face (Z+)
-            [
-                Vec3::new(0.0, 0.0, 1.0),
-                Vec3::new(1.0, 0.0, 1.0),
-                Vec3::new(1.0, 1.0, 1.0),
-                Vec3::new(0.0, 1.0, 1.0),
-            ],
-            // Left face (X-)
-            [
-                Vec3::new(0.0, 1.0, 1.0),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec3::new(0.0, 0.0, 0.0),
-                Vec3::new(0.0, 0.0, 1.0),
-            ],
-            // Right face (X+)
-            [
-                Vec3::new(1.0, 1.0, 1.0),
-                Vec3::new(1.0, 1.0, 0.0),
-                Vec3::new(1.0, 0.0, 0.0),
-                Vec3::new(1.0, 0.0, 1.0),
-            ],
-            // Bottom face (Y-)
-            [
-                Vec3::new(0.0, 0.0, 0.0),
-                Vec3::new(1.0, 0.0, 0.0),
-                Vec3::new(1.0, 0.0, 1.0),
-                Vec3::new(0.0, 0.0, 1.0),
-            ],
-            // Top face (Y+)
-            [
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec3::new(1.0, 1.0, 0.0),
-                Vec3::new(1.0, 1.0, 1.0),
-                Vec3::new(0.0, 1.0, 1.0),
-            ],
-        ];
 
         // UV coordinates for each corner of a face
         let uvs = resources
@@ -87,24 +52,30 @@ impl Voxel {
             })
             .to_uvs();
 
-        let mut vertices = [VertexTex::new(Vec3::ZERO, Vec2::ZERO); 36];
-        let mut vertex_index = 0;
-
-        // Generate two triangles per face
-        for face in &faces {
-            // Triangle 1: [0, 1, 2]
-            vertices[vertex_index] = VertexTex::new(face[0] + pos, uvs[0]);
-            vertices[vertex_index + 1] = VertexTex::new(face[1] + pos, uvs[1]);
-            vertices[vertex_index + 2] = VertexTex::new(face[2] + pos, uvs[2]);
-
-            // Triangle 2: [2, 3, 0]
-            vertices[vertex_index + 3] = VertexTex::new(face[2] + pos, uvs[2]);
-            vertices[vertex_index + 4] = VertexTex::new(face[3] + pos, uvs[3]);
-            vertices[vertex_index + 5] = VertexTex::new(face[0] + pos, uvs[0]);
-
-            vertex_index += 6;
-        }
-
-        vertices
+        FACE_NORMALS
+            .into_iter()
+            .filter(|normal| !hidden_faces.contains(normal))
+            .flat_map(|normal| {
+                let corners = face_corners(normal);
+                // Counter-clockwise when viewed from outside
+                [0, 3, 2, 2, 1, 0].map(|i| VertexTex::new(corners[i] + pos, uvs[i]))
+            })
+            .collect()
     }
+}
+
+/// Corners of the unit-cube face pointing along `normal`, in the same order as the atlas UVs:
+/// [top_left, top_right, bottom_right, bottom_left] when viewed from outside.
+fn face_corners(normal: IVec3) -> [Vec3; 4] {
+    let normal = normal.as_vec3();
+    let up = if normal.y == 0.0 { Vec3::Y } else { Vec3::Z };
+    let right = up.cross(normal);
+    let centre = Vec3::splat(0.5) + normal * 0.5;
+    let (r, u) = (right * 0.5, up * 0.5);
+    [
+        centre - r + u,
+        centre + r + u,
+        centre + r - u,
+        centre - r - u,
+    ]
 }

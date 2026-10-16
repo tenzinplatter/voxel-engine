@@ -21,6 +21,11 @@ pub(crate) fn clear_color(r: f32, g: f32, b: f32, a: f32) {
 pub(crate) fn setup_3d_rendering() {
     unsafe {
         glEnable(GL_DEPTH_TEST);
+        
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
+
         glDisable(GL_BLEND);
     }
 }
@@ -28,6 +33,8 @@ pub(crate) fn setup_3d_rendering() {
 fn setup_2d_rendering() {
     unsafe {
         glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
