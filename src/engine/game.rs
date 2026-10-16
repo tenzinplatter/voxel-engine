@@ -39,7 +39,8 @@ impl GameState {
         self.update_selected_block(input_state);
         self.handle_mouse(input_state);
         self.update_player(delta_time, input_state);
-        self.world.rebuild_dirty_chunks(resources);
+        self.world
+            .rebuild_dirty_chunks(resources);
     }
 
     fn handle_mouse(&mut self, input_state: &InputState) {

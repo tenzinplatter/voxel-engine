@@ -69,7 +69,6 @@ fn setup_sdl_and_window() -> (Sdl, GlWindow) {
     unsafe { load_global_gl(&|p_name| win.get_proc_address(p_name)) };
 
     sdl.set_relative_mouse_mode(true).unwrap();
-    win.set_swap_interval(video::GlSwapInterval::Vsync).unwrap();
 
     clear_color(0.2, 0.3, 0.3, 1.0);
 

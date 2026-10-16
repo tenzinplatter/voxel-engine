@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use glam::{IVec2, IVec3, Mat4, Vec3Swizzles};
+use glam::{IVec2, IVec3, Mat4, Vec3, Vec3Swizzles};
 use noise::{NoiseFn, Perlin};
 
 use crate::{
@@ -78,15 +78,22 @@ impl World {
         chunks
     }
 
-    fn chunk_mesh(&self, resources: &GameResources, voxels: &[(IVec3, &Voxel)]) -> Option<Mesh> {
+    fn chunk_mesh(
+        &self,
+        resources: &GameResources,
+        voxels: &[(IVec3, &Voxel)],
+    ) -> Option<Mesh> {
         if voxels.is_empty() {
             return None;
         }
 
         let vertices: Vec<_> = voxels
             .iter()
-            .flat_map(|&(pos, vox)| vox.get_vertices(resources, &self.hidden_faces(pos)))
+            .flat_map(|&(pos, vox)| {
+                vox.get_vertices(resources, &self.hidden_faces(pos))
+            })
             .collect();
+
         Some(Mesh::new(
             &vertices,
             Mat4::IDENTITY,
